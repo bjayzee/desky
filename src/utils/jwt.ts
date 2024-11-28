@@ -5,8 +5,6 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_EXPIRE_TIME = process.env.JWT_EXPIRE_TIME as string;
 
-console.log("JWT_SECRET", JWT_SECRET)
-
 interface JwtPayload {
     agencyId: string;
     email: string;
