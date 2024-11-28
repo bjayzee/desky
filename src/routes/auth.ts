@@ -8,8 +8,6 @@ export default (router: Router): void => {
      *   post:
      *     summary: Register agency/recruiters
      *     tags: [Auth]
-     *     security:
-     *       - ApiKeyAuth: []
      *     requestBody:
      *       required: true
      *       content:

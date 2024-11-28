@@ -1,3 +1,4 @@
+import { url } from 'inspector';
 import swaggerJSDoc from 'swagger-jsdoc';
 
 const options = {
@@ -17,15 +18,19 @@ const options = {
                 url: "http://localhost:5000/api/v1",
                 description: "Local server",
             },
+            {
+                url: "https://desky-ae3m.onrender.com/api/v1",
+                description: "Production server",
+            }
         ],
         components: {
-            securitySchemes: {
-                ApiKeyAuth: {
-                    type: "apiKey",
-                    in: "header",
-                    name: "x-api-key", 
-                },
-            },
+            // securitySchemes: {
+            //     ApiKeyAuth: {
+            //         type: "apiKey",
+            //         in: "header",
+            //         name: "x-api-key", 
+            //     },
+            // },
             schemas: {
                 Agency: {
                     type: "object",
