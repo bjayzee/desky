@@ -1,4 +1,3 @@
-import { url } from 'inspector';
 import swaggerJSDoc from 'swagger-jsdoc';
 
 const options = {
@@ -24,13 +23,13 @@ const options = {
             }
         ],
         components: {
-            // securitySchemes: {
-            //     ApiKeyAuth: {
-            //         type: "apiKey",
-            //         in: "header",
-            //         name: "x-api-key", 
-            //     },
-            // },
+            securitySchemes: {
+                ApiKeyAuth: {
+                    type: "apiKey",
+                    in: "header",
+                    name: "x-api-key", 
+                },
+            },
             schemas: {
                 Agency: {
                     type: "object",
