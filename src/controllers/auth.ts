@@ -8,6 +8,7 @@ import { generateSixDigitCode } from '../utils/codeGen';
 import { createToken, findToken } from '../models/token';
 import { TokenType } from '../types/enums';
 import { generateJwt } from '../utils/jwt';
+import argon2 from 'argon2';
 
 
 
@@ -220,7 +221,9 @@ export const verifyResetPassword = async (req: Request, res: Response, next: Nex
 
         // Update the user's password
 
-        const agency = await updateAgencyById(foundToken.userId, { password: newPassword });
+        const hashedPassword = await argon2.hash(newPassword);
+
+        const agency = await updateAgencyById(foundToken.userId, { password: hashedPassword });
         if (!agency) {
             return sendResponse(res, httpStatus.NOT_FOUND, false, 'User not found');
         }
