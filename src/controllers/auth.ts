@@ -3,12 +3,14 @@ import { agencySchema, loginSchema } from '../config/validations';
 import { sendResponse } from '../utils/response';
 import { sendEmail } from "../utils/mailSender";
 import httpStatus from 'http-status';
-import { getAgencyByEmail, createAgency, verifyPassword, updateAgencyById } from '../models/agency';
+import { createAgency, getAgencyByName, getAgencyByUserId } from '../models/agency';
 import { generateSixDigitCode } from '../utils/codeGen';
-import { createToken, findToken } from '../models/token';
+import { createToken, createTokenWithoutSession, findToken } from '../models/token';
 import { TokenType } from '../types/enums';
 import { generateJwt } from '../utils/jwt';
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
+import { createUser, getUserByEmail, updateUserById, verifyPassword } from '../models/user';
+import mongoose from 'mongoose';
 
 
 
@@ -22,35 +24,65 @@ export const registerAgency = async (req: Request, res: Response, next: NextFunc
             return sendResponse(res, httpStatus.BAD_REQUEST, false, "Input validation failed", result.error.errors);
         }
 
-        const { email } = result.data;
+        const { email, password, companyName, ...rest } = result.data;
+
+        // Trim and lowercase email and companyName
+        const trimmedEmail = email.trim().toLowerCase();
+        const trimmedCompanyName = companyName.trim().toLowerCase();
 
         // Check if the user already exists
-        const existingUser = await getAgencyByEmail(email);
+        const existingUser = await getUserByEmail(trimmedEmail);
         if (existingUser) {
             return sendResponse(res, httpStatus.CONFLICT, false, "User already exists");
         }
 
-        // Create the new agency
-        const agency = await createAgency(result.data);
+        const existingAgency = await getAgencyByName(trimmedCompanyName);
+        if (existingAgency) {
+            return sendResponse(res, httpStatus.CONFLICT, false, "Company Name already exists");
+        }
+
+        // Start MongoDB session and transaction
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        let user, agency;
+        try {
+            // Create User
+            user = await createUser({ email: trimmedEmail, password }, session);
+            const userId = new mongoose.Types.ObjectId(user._id as string);
+
+            // Create the new agency
+            agency = await createAgency({ userId, companyName: trimmedCompanyName, ...rest }, session);
 
 
-        // Generate a six-digit verification code
-        const verificationCode = generateSixDigitCode();
+            // Generate a six-digit verification code
+            const verificationCode = generateSixDigitCode();
+            
 
-        // Save the verification code to the database
+            // Save the verification code to the database
+            await createToken({
+                token: verificationCode,
+                userId: userId.toString(),
+                type: TokenType.EMAIL_VERIFICATION,
+                expiresAt: new Date(Date.now() + 3600000)
+            }, session);
 
-        await createToken({
-            token: verificationCode,
-            userId: agency._id as string,
-            type: TokenType.EMAIL_VERIFICATION,
-            expiresAt: new Date(Date.now() + 3600000)
-        });
+            // Send the verification code via email
+            await sendEmail(trimmedEmail, "Email Verification Code", `Your verification code is ${verificationCode}`);
 
+            // Commit transaction if successful
+            await session.commitTransaction();
+            console.log("Transaction committed successfully");
 
-        // Send the verification code via email
-        await sendEmail(email, "Email Verification Code", `Your verification code is ${verificationCode}`);
-
-        return sendResponse(res, httpStatus.CREATED, true, "User registered successfully, please check your email for the verification code", agency);
+            // Send success response
+            return sendResponse(res, httpStatus.CREATED, true, "User registered successfully, please check your email for the verification code", agency);
+        } catch (error) {
+            // Rollback changes if any error occurs
+            await session.abortTransaction();
+            next(error);
+        } finally {
+            session.endSession();
+        }
     } catch (error) {
         req.log?.error(error);
         next(error);
@@ -72,7 +104,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
 
         // Check if the user already exists
-        const user = await getAgencyByEmail(email);
+        const user = await getUserByEmail(email);
         if (!user) {
             return sendResponse(res, httpStatus.UNAUTHORIZED, false, "Invalid email or password");
         }
@@ -89,9 +121,15 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return sendResponse(res, httpStatus.UNAUTHORIZED, false, "Invalid email or password");
         }
 
+        const agency = await getAgencyByUserId(user._id as string);
+
+        if (!agency) return sendResponse(res, httpStatus.UNAUTHORIZED, false, "invalid payload");
+
         // Generate JWT token
         const payload = {
-            agencyId: user._id as string,
+            userId: user._id as string,
+            userType: user.userType,
+            agencyId: agency._id.toString(),
             email: user.email,
             role: "admin",
         };
@@ -100,7 +138,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const foundUser = {
             email: user.email,
-            name: user.fullName,
+            name: agency.fullName,
+            companyName: agency.companyName,
             token: token,
             id: user._id
         }
@@ -138,7 +177,7 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
         // update user as verified in the database
 
         const agencyId = foundToken.userId;
-        const agency = await updateAgencyById(agencyId, { isVerified: true });
+        const agency = await updateUserById(agencyId, { isVerified: true });
 
         if (!agency) {
             return sendResponse(res, httpStatus.INTERNAL_SERVER_ERROR, false, "Failed to verify email");
@@ -168,7 +207,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
         // Check if the user exists by email
 
-        const agency = await getAgencyByEmail(email);
+        const agency = await getUserByEmail(email);
         if (!agency) {
             return sendResponse(res, httpStatus.NOT_FOUND, false, 'User not found');
         }
@@ -179,7 +218,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
         // Save the verification code in the database with an expiration date
 
-        await createToken({
+        await createTokenWithoutSession({
             token: verificationCode,
             userId: agency._id as string,
             type: TokenType.PASSWORD_RESET,
@@ -223,7 +262,7 @@ export const verifyResetPassword = async (req: Request, res: Response, next: Nex
 
         const hashedPassword = await argon2.hash(newPassword);
 
-        const agency = await updateAgencyById(foundToken.userId, { password: hashedPassword });
+        const agency = await updateUserById(foundToken.userId, { password: hashedPassword });
         if (!agency) {
             return sendResponse(res, httpStatus.NOT_FOUND, false, 'User not found');
         }

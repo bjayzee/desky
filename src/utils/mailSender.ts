@@ -11,8 +11,8 @@ export const sendEmail = async (to: string, subject: string, text: string): Prom
     try {
 
         const mailOptions = {
-            from: process.env.EMAIL_USER, 
-            to, 
+            from: process.env.EMAIL_USER,
+            to,
             subject,
             text,
         };

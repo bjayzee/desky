@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, ClientSession } from "mongoose";
 import { TokenType } from "../types/enums";
 
 interface IToken extends Document {
@@ -29,7 +29,12 @@ export const TokenModel = model<IToken>("Token", tokenSchema);
 
 
 // create token
-export const createToken = (tokenData: Partial<IToken>) =>
+export const createToken = (tokenData: Partial<IToken>, session: ClientSession) =>
+    new TokenModel(tokenData)
+        .save({ session })
+        .then((savedToken) => savedToken.toObject());
+
+export const createTokenWithoutSession = (tokenData: Partial<IToken>) =>
     new TokenModel(tokenData)
         .save()
         .then((savedToken) => savedToken.toObject());

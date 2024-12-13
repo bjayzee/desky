@@ -27,7 +27,7 @@ const options = {
                 ApiKeyAuth: {
                     type: "apiKey",
                     in: "header",
-                    name: "x-api-key", 
+                    name: "x-api-key",
                 },
             },
             schemas: {
@@ -45,6 +45,14 @@ const options = {
                     },
                     required: ["fullName", "email", "companyName", "country", "password"],
                 },
+                Member: {
+                    type: "object",
+                    properties: {
+                        email: {type: "string", format: "email", example: "johndoe@example.com"},
+                        agencyId: { type: String, format: "agencyId", example: "67*******159e01ec"},
+                    },
+                    required: ["email", "agencyId"],
+                },
             },
         },
         security: [
@@ -53,7 +61,7 @@ const options = {
             },
         ],
     },
-    apis: ['./src/routes/*.ts'], 
+    apis: ['./src/routes/*.ts'],
 };
 
 export const swaggerSpec = swaggerJSDoc(options);
