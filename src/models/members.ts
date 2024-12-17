@@ -21,7 +21,6 @@ const MembersSchema = new Schema<IMembers>(
 );
 
 
-// CRUD Utility Methods
 export const MembersModel = model<IMembers>("Members", MembersSchema);
 
 export const getMembers = () => MembersModel.find().populate("organization").lean();
