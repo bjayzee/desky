@@ -1,4 +1,4 @@
-import { getAgencyById } from "../models/agency";
+import { getAgencyById, getAgencyByName } from "../models/agency";
 import { inviteMemberSchema } from "../config/validations";
 import { NextFunction, Request, Response } from "express";
 import { sendResponse } from "../utils/response";
@@ -74,8 +74,38 @@ export const inviteMember = async (req: Request, res: Response, next: NextFuncti
         } finally {
             session.endSession();
         }
-        next();
     } catch (error) {
+        req.log?.error(error);
+        next(error);
+    }
+}
+
+export const fetchAgencyByName = async (req: Request, res: Response, next: NextFunction) =>{
+    try {
+
+    const { companyName } = req.params;
+
+    const agency = await getAgencyByName(companyName);
+
+return sendResponse(res, httpStatus.OK, true, "data fetched successfully", agency)
+        
+    } catch (error) {
+        req.log?.error(error);
+        next(error);
+    }
+}
+
+export const fetchAgencyById = async (req: Request, res: Response, next: NextFunction) =>{
+    try {
+
+    const { agencyId } = req.params;
+
+    const agency = await getAgencyById(agencyId);
+
+    return sendResponse(res, httpStatus.OK, true, "data fetched successfully", agency);
+
+    }
+    catch(error){
         req.log?.error(error);
         next(error);
     }
