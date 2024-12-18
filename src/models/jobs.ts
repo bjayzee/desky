@@ -1,5 +1,6 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types, Query } from "mongoose";
 import { IMembers } from "./members";
+import { AgencyModel } from "./agency";
 
 export enum WorkPlaceMode {
     HYBRID = "Hybrid",
@@ -28,7 +29,7 @@ export interface JobBoards {
 
 interface IJobs extends Document {
     title: string;
-    agencyId: string;
+    agencyId: Types.ObjectId;
     companyName: string;
     department: string;
     experienceLevel: string;
@@ -46,12 +47,13 @@ interface IJobs extends Document {
     questions: Question[];
     jobBoards?: JobBoards[];
     collaborators?: IMembers[];
+    deadlineDate: Date;
 }
 
 const JobSchema = new Schema<IJobs>(
     {
         title: { type: String, required: true, index: true },
-        agencyId: { type: String, required: true, index: true },
+        agencyId: { type: Schema.Types.ObjectId, ref: "Agency", required: true, index: true },
         companyName: { type: String, required: true, index: true },
         department: { type: String, required: true },
         experienceLevel: { type: String, required: true },
@@ -65,6 +67,7 @@ const JobSchema = new Schema<IJobs>(
             required: true,
         },
         employeeLocation: { type: String, required: true },
+        deadlineDate: { type: Date, required: true},
         hourlyRate: { type: Number },
         baseSalaryRange: { type: Number, required: true },
         upperSalaryRange: { type: Number, required: true },
@@ -107,11 +110,27 @@ const JobSchema = new Schema<IJobs>(
     { timestamps: true }
 );
 
-JobSchema.index({ title: 1, companyId: 1, companyName: 1 });
+JobSchema.index({ title: 1, agencyId: 1, companyName: 1 });
 
 
 export const JobModel = model<IJobs>("Job", JobSchema);
 
+
+JobSchema.pre("findOneAndDelete", async function (next) {
+    const query = this as Query<unknown, Document>;
+
+    // Get the job being deleted
+    const job = await query.model.findOne(query.getFilter());
+    if (job) {
+        
+        // Remove job from the agency's jobs array
+        await AgencyModel.findByIdAndUpdate(job.agencyId, {
+            $pull: { jobs: job._id },
+        });
+    }
+
+    next();
+});
 
 export const getJobs = (filters = {}, page = 1, limit = 10) => {
     return JobModel.find(filters)

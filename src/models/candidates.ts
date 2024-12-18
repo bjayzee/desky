@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose";
+import { Schema, model, Document, Types, ClientSession } from "mongoose";
 
 interface ICandidate extends Document {
     fullName: string;
@@ -6,7 +6,7 @@ interface ICandidate extends Document {
     phoneNumber: string;
     resumeUrl?: string;
     linkedInProfile?: string;
-    applications: Types.ObjectId[]; // References to Applications
+    applications: Types.ObjectId[]; 
 }
 
 const candidateSchema = new Schema<ICandidate>(
@@ -16,7 +16,7 @@ const candidateSchema = new Schema<ICandidate>(
         phoneNumber: { type: String, required: true },
         resumeUrl: { type: String },
         linkedInProfile: { type: String },
-        applications: [{ type: Schema.Types.ObjectId, ref: "Application" }], // Tracks candidate applications
+        applications: [{ type: Schema.Types.ObjectId, ref: "Application" }],
     },
     { timestamps: true }
 );
@@ -24,9 +24,17 @@ const candidateSchema = new Schema<ICandidate>(
 export const CandidateModel = model<ICandidate>("Candidate", candidateSchema);
 
 export const getCandidates = () => CandidateModel.find().populate("applications").lean();
+
 export const getCandidateById = (id: string) => CandidateModel.findById(id).populate("applications").lean();
-export const createCandidate = (values: Partial<ICandidate>) =>
-    new CandidateModel(values).save().then((candidate) => candidate.toObject());
+
+export const getCandidateByEmailWithApplications = (email: string) => CandidateModel.findOne({ email }).populate("applications").lean();
+
+export const getCandidateByEmail = (email: string) => CandidateModel.findOne({ email });
+
+export const createCandidate = (values: Partial<ICandidate>, session: ClientSession) =>
+    new CandidateModel(values).save({session}).then((candidate) => candidate.toObject());
+
 export const deleteCandidateById = (id: string) => CandidateModel.findByIdAndDelete(id);
+
 export const updateCandidateById = (id: string, values: Partial<ICandidate>) =>
     CandidateModel.findByIdAndUpdate(id, values, { new: true }).lean();

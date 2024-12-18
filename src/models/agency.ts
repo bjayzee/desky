@@ -1,4 +1,5 @@
-import { Schema, model, Document, Types, ClientSession } from "mongoose";
+import { Schema, model, Document, Types, ClientSession, Query } from "mongoose";
+import { JobModel } from "./jobs";
 
 interface IAgency extends Document {
     fullName: string;
@@ -8,7 +9,10 @@ interface IAgency extends Document {
     linkedinProfile?: string;
     logoUrl?: string;
     userId: Types.ObjectId;
+    companySize?: string;
+    industry?: string;
     description?: string;
+    jobs?: Types.ObjectId,
 }
 
 const agencySchema = new Schema<IAgency>({
@@ -19,10 +23,26 @@ const agencySchema = new Schema<IAgency>({
     logoUrl: { type: String },
     description: { type: String },
     linkedinProfile: { type: String },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    jobs: [{type: Schema.Types.ObjectId, ref: "jobs" }],
+    userId: { type: Schema.Types.ObjectId, ref: "users", required: true },
 },
     { timestamps: true }
 );
+
+
+agencySchema.pre("findOneAndDelete", async function (next) {
+    const query = this as Query<unknown, IAgency>;
+
+    
+    const agency = await query.model.findOne(query.getFilter());
+
+    if (agency) {
+        
+        await JobModel.deleteMany({ agencyId: agency._id });
+    }
+
+    next();
+});
 
 
 agencySchema.pre("save", async function (next) {
@@ -32,12 +52,11 @@ agencySchema.pre("save", async function (next) {
 });
 
 
-
 export const AgencyModel = model<IAgency>('Agency', agencySchema);
 
 export const getAgencies = () => AgencyModel.find().lean();
 
-export const getAgencyByName = (companyName: string) => AgencyModel.findOne({ companyName }).lean();
+export const getAgencyByName = (companyName: string) => AgencyModel.findOne({ companyName }).populate("jobs").lean();
 
 export const getAgencyById = (id: string) => AgencyModel.findById(id).lean();
 
