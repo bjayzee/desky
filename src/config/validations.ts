@@ -1,4 +1,3 @@
-import { url } from 'inspector';
 import { z } from 'zod';
 
 
@@ -70,7 +69,7 @@ export const jobSchema = z.object({
     employmentType: z.string(),
     description: z.string(),
     skills: z.array(z.string()),
-    deadlineDate: z.date(),
+    deadlineDate: z.string(),
     officeLocation: z.string(),
     workPlaceMode: WorkPlaceMode,
     employeeLocation: z.string(),

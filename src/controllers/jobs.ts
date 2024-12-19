@@ -62,7 +62,7 @@ export const postJob = async (req: Request, res: Response, next: NextFunction) =
             baseSalaryRange: result.data.baseSalaryRange,
             upperSalaryRange: result.data.upperSalaryRange,
             otherBenefits: result.data.otherBenefits,
-            deadlineDate: result.data.deadlineDate,
+            deadlineDate: new Date(result.data.deadlineDate),
             status: mapToJobStatus(result.data.status),
             questions: (result.data.questions || []).map((q) => ({
                 id: q.id,
