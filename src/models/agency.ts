@@ -12,7 +12,7 @@ interface IAgency extends Document {
     companySize?: string;
     industry?: string;
     description?: string;
-    jobs?: Types.ObjectId,
+    jobs?: Types.ObjectId[],
 }
 
 const agencySchema = new Schema<IAgency>({
