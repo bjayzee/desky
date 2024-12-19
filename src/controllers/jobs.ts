@@ -98,10 +98,8 @@ export const getJobsByAgencyName = async (req: Request, res: Response, next: Nex
     try {
 
         const { companyName } = req.params;
-        console.log(companyName);
 
         const jobs = await getJobByAgencyName(companyName);
-        console.log(jobs);
 
         return sendResponse(res, httpStatus.OK, true, "Jobs fetched successfully", jobs);
 
