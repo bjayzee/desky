@@ -23,8 +23,9 @@ const agencySchema = new Schema<IAgency>({
     logoUrl: { type: String },
     description: { type: String },
     linkedinProfile: { type: String },
-    jobs: [{type: Schema.Types.ObjectId, ref: "jobs" }],
-    userId: { type: Schema.Types.ObjectId, ref: "users", required: true },
+    jobs: [{type: Schema.Types.ObjectId, ref: "job" }],
+    userId: { type: Schema.Types.ObjectId, ref: "member", required: true },
+    industry: {type: String}
 },
     { timestamps: true }
 );

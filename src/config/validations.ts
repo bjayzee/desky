@@ -70,6 +70,7 @@ export const jobSchema = z.object({
     employmentType: z.string(),
     description: z.string(),
     skills: z.array(z.string()),
+    deadlineDate: z.date(),
     officeLocation: z.string(),
     workPlaceMode: WorkPlaceMode,
     employeeLocation: z.string(),
