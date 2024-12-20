@@ -142,6 +142,10 @@ export const getJobs = (filters = {}, page = 1, limit = 10) => {
 
 
 export const getJobById = (id: string) =>
+    JobModel.findById(id).lean();
+
+
+export const getJobByIdWithCollaborators = (id: string) =>
     JobModel.findById(id).populate("collaborators").lean();
 
 export const getJobsByCompanyId = (
