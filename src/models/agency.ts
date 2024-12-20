@@ -57,7 +57,7 @@ export const AgencyModel = model<IAgency>('Agency', agencySchema);
 
 export const getAgencies = () => AgencyModel.find().lean();
 
-export const getAgencyByName = (companyName: string) => AgencyModel.findOne({ companyName }).populate("jobs").lean();
+export const getAgencyByName = (companyName: string) => AgencyModel.findOne({ companyName }).populate({ path: 'jobs', model: 'Job' }).lean();
 
 export const getAgencyById = (id: string) => AgencyModel.findById(id).lean();
 

@@ -34,65 +34,95 @@ function mapToJobStatus(value: string): JobStatus | undefined {
 
 
 export const postJob = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+    const session = await mongoose.startSession(); 
+    session.startTransaction(); 
 
+    try {
         const result = await jobSchema.safeParseAsync(req.body);
 
         if (!result.success) {
             req.log?.error(result.error);
-            return sendResponse(res, httpStatus.BAD_REQUEST, false, "Input validation failed", result.error.errors);
+            await session.abortTransaction();
+            session.endSession();
+            return sendResponse(
+                res,
+                httpStatus.BAD_REQUEST,
+                false,
+                "Input validation failed",
+                result.error.errors
+            );
         }
 
         const agencyId = new mongoose.Types.ObjectId(result.data.agencyId);
+        const agency = await AgencyModel.findById(agencyId).session(session);
 
+        if (!agency) {
+            await session.abortTransaction();
+            session.endSession();
+            return sendResponse(
+                res,
+                httpStatus.NOT_FOUND,
+                false,
+                "Agency not found"
+            );
+        }
 
-        const job = await createJob({
-            title: result.data.title,
-            agencyId: agencyId,
-            companyName: result.data.companyName,
-            department: result.data.department,
-            experienceLevel: result.data.experienceLevel,
-            employmentType: result.data.employmentType,
-            description: result.data.description,
-            skills: result.data.skills,
-            officeLocation: result.data.officeLocation,
-            workPlaceMode: mapToWorkPlaceMode(result.data.workPlaceMode),
-            employeeLocation: result.data.employeeLocation,
-            hourlyRate: result.data.hourlyRate,
-            baseSalaryRange: result.data.baseSalaryRange,
-            upperSalaryRange: result.data.upperSalaryRange,
-            otherBenefits: result.data.otherBenefits,
-            deadlineDate: new Date(result.data.deadlineDate),
-            status: mapToJobStatus(result.data.status),
-            questions: (result.data.questions || []).map((q) => ({
-                id: q.id,
-                question: q.question,
-                type: q.type,
-                isRequired: q.isRequired,
-                options: q.options || [],
-            })),
-            jobBoards: result.data.jobBoards,
-        });
+        // Create the job
+        const job = await createJob(
+            {
+                title: result.data.title,
+                agencyId,
+                companyName: result.data.companyName,
+                department: result.data.department,
+                experienceLevel: result.data.experienceLevel,
+                employmentType: result.data.employmentType,
+                description: result.data.description,
+                skills: result.data.skills,
+                officeLocation: result.data.officeLocation,
+                workPlaceMode: mapToWorkPlaceMode(result.data.workPlaceMode),
+                employeeLocation: result.data.employeeLocation,
+                hourlyRate: result.data.hourlyRate,
+                baseSalaryRange: result.data.baseSalaryRange,
+                upperSalaryRange: result.data.upperSalaryRange,
+                otherBenefits: result.data.otherBenefits,
+                deadlineDate: new Date(result.data.deadlineDate),
+                status: mapToJobStatus(result.data.status),
+                questions: (result.data.questions || []).map((q) => ({
+                    id: q.id,
+                    question: q.question,
+                    type: q.type,
+                    isRequired: q.isRequired,
+                    options: q.options || [],
+                })),
+                jobBoards: result.data.jobBoards,
+            },
+            session 
+        );
 
         await AgencyModel.findByIdAndUpdate(
             agencyId,
             { $push: { jobs: job._id } },
-            { new: true }
+            { session, new: true } // Pass the session and request the updated document
         );
 
+        await session.commitTransaction();
+        session.endSession();
 
         return sendResponse(
             res,
-            httpStatus.OK,
+            httpStatus.CREATED,
             true,
             "Job created successfully",
             job
         );
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         req.log?.error(error);
         next(error);
     }
-}
+};
+
 
 export const getJobsByAgencyName = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -172,7 +202,7 @@ export const applyJobs = async (req: Request, res: Response, next: NextFunction)
                 submittedAt
             }, session);
 
-            await CandidateModel.findOneAndUpdate({ _id: candidateId}, {$push: {applications: application._id}}, {session})
+            await CandidateModel.findOneAndUpdate({ _id: candidateId }, { $push: { applications: application._id } }, { session })
 
             await session.commitTransaction();
 

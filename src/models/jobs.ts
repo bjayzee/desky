@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types, Query } from "mongoose";
+import { Schema, model, Document, Types, Query, ClientSession } from "mongoose";
 import { IMembers } from "./members";
 import { AgencyModel } from "./agency";
 
@@ -187,8 +187,8 @@ export const getJobsByCompanyNameAndStatus = (
 };
 
 
-export const createJob = (values: Partial<IJobs>) =>
-    new JobModel(values).save().then((job) => job.toObject());
+export const createJob = (values: Partial<IJobs>, session: ClientSession) =>
+    new JobModel(values).save({session}).then((job) => job.toObject());
 
 
 export const updateJobById = (id: string, values: Partial<IJobs>) =>
