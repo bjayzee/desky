@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 import { createMember } from "../models/members";
 import { sendEmail } from "../utils/mailSender";
 import httpStatus from "http-status";
+import { updateApplicationStatus } from "models/application";
 
 export const inviteMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -109,4 +110,17 @@ export const fetchAgencyById = async (req: Request, res: Response, next: NextFun
     }
 }
 
+export const updateApplicationStages = (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id, status } = req.body;
 
+        const updatedJob = updateApplicationStatus(id, status);
+
+        return sendResponse(res, httpStatus.OK, true, "Job updated successfully", updatedJob);
+        
+    } catch (error) {
+        req.log?.error(error);
+        next(error);
+        
+    }
+}

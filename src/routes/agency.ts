@@ -56,4 +56,5 @@ export default (router: Router): void => {
 
     router.get('/applications/:jobId', fetchApplicationsByJobId);
     
+    
 };
