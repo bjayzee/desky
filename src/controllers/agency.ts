@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 import { createMember } from "../models/members";
 import { sendEmail } from "../utils/mailSender";
 import httpStatus from "http-status";
-import { updateApplicationStatus } from "models/application";
+import { updateApplicationStatus } from "../models/application";
 
 export const inviteMember = async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -11,7 +11,7 @@ import { generateJwt } from '../utils/jwt';
 import * as argon2 from 'argon2';
 import { createUser, getUserByEmail, updateUserById, verifyPassword } from '../models/user';
 import mongoose from 'mongoose';
-import { getMemberByEmail } from 'models/members';
+import { getMemberByEmail } from '../models/members';
 
 
 
