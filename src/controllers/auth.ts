@@ -11,6 +11,7 @@ import { generateJwt } from '../utils/jwt';
 import * as argon2 from 'argon2';
 import { createUser, getUserByEmail, updateUserById, verifyPassword } from '../models/user';
 import mongoose from 'mongoose';
+import { getMemberByEmail } from 'models/members';
 
 
 
@@ -57,7 +58,7 @@ export const registerAgency = async (req: Request, res: Response, next: NextFunc
 
             // Generate a six-digit verification code
             const verificationCode = generateSixDigitCode();
-            
+
 
             // Save the verification code to the database
             await createToken({
@@ -123,6 +124,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const agency = await getAgencyByUserId(user._id as string);
 
+        const member = await getMemberByEmail(email);
+
         if (!agency) return sendResponse(res, httpStatus.UNAUTHORIZED, false, "invalid payload");
 
         // Generate JWT token
@@ -141,7 +144,10 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             name: agency.fullName,
             companyName: agency.companyName,
             token: token,
-            id: user._id
+            id: user._id,
+            agencyId: agency._id,
+            userType: user.userType,
+            memberName: member?.name,
         }
 
         return sendResponse(res, httpStatus.OK, true, "login success", foundUser);

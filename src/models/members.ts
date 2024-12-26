@@ -23,13 +23,18 @@ const MembersSchema = new Schema<IMembers>(
 
 export const MembersModel = model<IMembers>("Members", MembersSchema);
 
-export const getMembers = () => MembersModel.find().populate("organization").lean();
+export const getMembers = () => MembersModel.find().populate("agencyId").lean();
+
 export const getMemberByEmail = (email: string) =>
-    MembersModel.findOne({ email }).populate("organization").lean();
+    MembersModel.findOne({ email }).populate("agencyId").lean();
+
 export const getMemberById = (id: string) =>
-    MembersModel.findById(id).populate("organization").lean();
+    MembersModel.findById(id).populate("agencyId").lean();
+
 export const createMember = (values: Partial<IMembers>, session: ClientSession) =>
     new MembersModel(values).save({session}).then((member) => member.toObject());
+
+
 
 export const verifyPassword = async (hashedPassword: string, plainPassword: string) => {
     return argon2.verify(hashedPassword, plainPassword);

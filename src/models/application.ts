@@ -1,5 +1,11 @@
 import { Schema, model, Document, Types, ClientSession } from "mongoose";
 
+
+interface IAnswer {
+    questionId: string;
+    questionText: string;
+    answer: string;
+}
 interface IApplication extends Document {
     candidateId: Types.ObjectId;
     jobId: Types.ObjectId;
@@ -9,20 +15,28 @@ interface IApplication extends Document {
     additionalData?: Record<string, unknown>;
     submittedAt: Date;
     notes?: Types.ObjectId[];
+    answers?: IAnswer[];
 }
 
 const applicationSchema = new Schema<IApplication>(
     {
         candidateId: { type: Schema.Types.ObjectId, ref: "Candidate", required: true },
-        jobId: { type: Schema.Types.ObjectId, ref: "JobPosting", required: true },
+        jobId: { type: Schema.Types.ObjectId, ref: "Job", required: true },
         status: {
             type: String, required: true, default: "applied"
         },
         resumeUrl: { type: String, required: true },
         coverLetter: { type: String },
-        additionalData: { type: Schema.Types.Mixed }, 
+        additionalData: { type: Schema.Types.Mixed },
         submittedAt: { type: Date, default: Date.now },
-        notes: [{ type: Schema.Types.ObjectId, ref: "notes"}]
+        notes: [{ type: Schema.Types.ObjectId, ref: "Note" }],
+        answers: [
+            {
+                questionId: { type: String, required: true },
+                questionText: { type: String, required: true },
+                answer: { type: String, required: true },
+            },
+        ],
     },
     { timestamps: true }
 );
@@ -38,6 +52,10 @@ export const getApplicationById = (id: string) =>
         .populate({ path: "candidateId", select: "fullName email" })
         .populate({ path: "jobId", select: "title companyName" })
         .lean();
+
+export const getApplicationsByCandidateId = (candidateId: string) => ApplicationModel.find({ candidateId }).lean();
+
+export const getApplicationsByJobId = (jobId: string) => ApplicationModel.find({ jobId }).lean();
 
 
 export const createApplication = (values: Partial<IApplication>, session: ClientSession) =>

@@ -37,6 +37,7 @@ export const verifyResetPasswordSchema = z.object({
 export const inviteMemberSchema = z.object({
     email: z.string().email(),
     agencyId: z.string(),
+    fullName: z.string(),
 });
 
 

@@ -6,7 +6,7 @@ import httpStatus from "http-status";
 import { AgencyModel } from "../models/agency";
 import mongoose from "mongoose";
 import { CandidateModel, createCandidate, getCandidateByEmail } from "../models/candidates";
-import { createApplication } from "../models/application";
+import { createApplication, getApplicationsByJobId } from "../models/application";
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
     switch (value) {
@@ -34,8 +34,8 @@ function mapToJobStatus(value: string): JobStatus | undefined {
 
 
 export const postJob = async (req: Request, res: Response, next: NextFunction) => {
-    const session = await mongoose.startSession(); 
-    session.startTransaction(); 
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
         const result = await jobSchema.safeParseAsync(req.body);
@@ -96,7 +96,7 @@ export const postJob = async (req: Request, res: Response, next: NextFunction) =
                 })),
                 jobBoards: result.data.jobBoards,
             },
-            session 
+            session
         );
 
         await AgencyModel.findByIdAndUpdate(
@@ -170,11 +170,10 @@ export const updateJob = async (req: Request, res: Response, next: NextFunction)
 }
 
 export const applyJobs = async (req: Request, res: Response, next: NextFunction) => {
-    try {
 
         // todo: implement input validation
 
-        const { email, phoneNumber, fullName, resumeUrl, linkedInProfile, jobId, status, coverLetter, additionalData, submittedAt } = req.body;
+        const { email, phoneNumber, fullName, resumeUrl, linkedInProfile, jobId, status, coverLetter, additionalData, submittedAt, answers } = req.body;
 
         const trimmedEmail = email.trim().toLowerCase();
 
@@ -199,7 +198,14 @@ export const applyJobs = async (req: Request, res: Response, next: NextFunction)
                 coverLetter,
                 resumeUrl,
                 additionalData,
-                submittedAt
+                submittedAt,
+                answers: Array.isArray(answers)
+                    ? answers.map((ans: Record<string, string>) => ({
+                        questionId: ans.questionId,
+                        questionText: ans.questionText,
+                        answer: ans.answer,
+                    }))
+                    : [],
             }, session);
 
             await CandidateModel.findOneAndUpdate({ _id: candidateId }, { $push: { applications: application._id } }, { session })
@@ -220,18 +226,30 @@ export const applyJobs = async (req: Request, res: Response, next: NextFunction)
         } finally {
             session.endSession();
         }
+}
+
+export const getJobInfoById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+
+        const { id } = req.params;
+
+        return sendResponse(res, httpStatus.OK, true, "Job fetched successfully", await getJobById(id));
+
     } catch (error) {
         req.log?.error(error);
         next(error);
     }
 }
 
-export const getJobInfoById = async(req: Request, res: Response, next: NextFunction) => {
+export const fetchApplicationsByJobId = async (req: Request, res: Response, next: NextFunction) =>{
     try {
 
-        const { id } = req.params;
+        const { jobId } = req.params;
 
-        return sendResponse(res, httpStatus.OK, true, "Job fetched successfully", await getJobById(id));
+        const applications = await getApplicationsByJobId(jobId);
+
+        return sendResponse(res, httpStatus.OK, true, "Applications fetched successfully", applications);
+
         
     } catch (error) {
         req.log?.error(error);

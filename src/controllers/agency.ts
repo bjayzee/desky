@@ -19,7 +19,7 @@ export const inviteMember = async (req: Request, res: Response, next: NextFuncti
             return sendResponse(res, httpStatus.BAD_REQUEST, false, "Input validation failed", result.error.errors);
         }
 
-        const { email, agencyId } = result.data;
+        const { email, agencyId, fullName } = result.data;
         const trimmedEmail = email.trim().toLowerCase();
 
         const agency = await getAgencyById(agencyId);
@@ -29,8 +29,6 @@ export const inviteMember = async (req: Request, res: Response, next: NextFuncti
         }
 
         const password = generateRandomPassword();
-
-        console.log(password);
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -48,7 +46,7 @@ export const inviteMember = async (req: Request, res: Response, next: NextFuncti
 
             // create Membership
 
-            const member = await createMember({ userId: user._id as string, agencyId: agencyIds }, session);
+            const member = await createMember({ userId: user._id as string, agencyId: agencyIds, name: fullName }, session);
 
 
             // Send the verification code via email
