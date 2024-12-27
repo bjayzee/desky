@@ -55,7 +55,7 @@ export const getApplicationById = (id: string) =>
 
 export const getApplicationsByCandidateId = (candidateId: string) => ApplicationModel.find({ candidateId }).lean();
 
-export const getApplicationsByJobId = (jobId: string) => ApplicationModel.find({ jobId }).lean();
+export const getApplicationsByJobId = (jobId: string) => ApplicationModel.find({ jobId }).populate('candidateId').populate("jobId").lean();
 
 
 export const createApplication = (values: Partial<IApplication>, session: ClientSession) =>
