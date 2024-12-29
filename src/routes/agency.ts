@@ -1,5 +1,5 @@
 import { applyJobs, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob } from "../controllers/jobs";
-import { fetchAgencyById, fetchAgencyByName, inviteMember } from "../controllers/agency";
+import { fetchAgencyById, fetchAgencyByName, inviteMember, updateApplicationStages } from "../controllers/agency";
 import { Router } from "express";
 
 export default (router: Router): void => {
@@ -55,6 +55,6 @@ export default (router: Router): void => {
     router.get('/jobs/:id', getJobInfoById);
 
     router.get('/applications/:jobId', fetchApplicationsByJobId);
-    
-    
+
+    router.patch('/applications/status', updateApplicationStages);
 };
