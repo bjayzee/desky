@@ -6,7 +6,7 @@ import httpStatus from "http-status";
 import { AgencyModel } from "../models/agency";
 import mongoose from "mongoose";
 import { CandidateModel, createCandidate, getCandidateByEmail } from "../models/candidates";
-import { createApplication, getApplicationsByJobId } from "../models/application";
+import { ApplicationModel, createApplication, getApplicationsByJobId } from "../models/application";
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
     switch (value) {
@@ -190,6 +190,21 @@ export const applyJobs = async (req: Request, res: Response, next: NextFunction)
 
             const candidateId = new mongoose.Types.ObjectId(candidate._id as string);
             const jobObjectId = new mongoose.Types.ObjectId(jobId as string);
+
+            const existingApplication = await ApplicationModel.findOne({
+                candidateId,
+                jobId: jobObjectId,
+            }).session(session);
+    
+            if (existingApplication) {
+                return sendResponse(
+                    res,
+                    httpStatus.CONFLICT,
+                    false,
+                    "Candidate has already applied for this job",
+                    null
+                );
+            }
 
             const application = await createApplication({
                 candidateId,
