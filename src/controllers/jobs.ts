@@ -157,8 +157,9 @@ export const getJobsByAgencyId = async (req: Request, res: Response, next: NextF
 export const updateJob = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
-        const { id, status } = req.body;
-        const updatedJob = await updateJobById(id, status);
+        const { id } = req.params;
+
+        const updatedJob = await updateJobById(id, req.body);
 
         return sendResponse(res, httpStatus.OK, true, "Job updated successfully", updatedJob);
 

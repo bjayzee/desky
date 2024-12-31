@@ -110,13 +110,17 @@ export const fetchAgencyById = async (req: Request, res: Response, next: NextFun
     }
 }
 
-export const updateApplicationStages = (req: Request, res: Response, next: NextFunction) => {
+export const updateApplicationStages = async(req: Request, res: Response, next: NextFunction) => {
     try {
         const { id, status } = req.body;
 
-        const updatedJob = updateApplicationStatus(id, status);
+        const updatedJob = await updateApplicationStatus(id, status);
 
-        return sendResponse(res, httpStatus.OK, true, "Job updated successfully", updatedJob);
+        if (!updatedJob) {
+            return sendResponse(res, httpStatus.NOT_FOUND, false, "Application not found");
+        }
+
+        return sendResponse(res, httpStatus.OK, true, "Application updated successfully", updatedJob);
         
     } catch (error) {
         req.log?.error(error);
