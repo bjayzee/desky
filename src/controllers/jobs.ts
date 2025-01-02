@@ -296,8 +296,8 @@ export const fetchApplicationsByAgencyId = async (req: Request, res: Response, n
 
         const [applications, total] = await Promise.all([
             ApplicationModel.find({ jobId: { $in: jobIds } })
-                .populate("candidateId", "fullName email")
-                .populate("jobId", "title companyName")
+                .populate("candidateId")
+                .populate("jobId")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(Number(limit))
