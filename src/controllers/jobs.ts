@@ -1,7 +1,7 @@
 import { sendResponse } from "../utils/response";
 import { jobSchema } from "../config/validations";
 import { NextFunction, Request, Response } from "express";
-import { createJob, getJobByAgencyId, getJobByAgencyName, getJobById, JobStatus, updateJobById, WorkPlaceMode } from "../models/jobs";
+import { createJob, getJobByAgencyId, getJobByAgencyName, getJobById, JobModel, JobStatus, updateJobById, WorkPlaceMode } from "../models/jobs";
 import httpStatus from "http-status";
 import { AgencyModel } from "../models/agency";
 import mongoose from "mongoose";
@@ -171,76 +171,76 @@ export const updateJob = async (req: Request, res: Response, next: NextFunction)
 
 export const applyJobs = async (req: Request, res: Response, next: NextFunction) => {
 
-        // todo: implement input validation
+    // todo: implement input validation
 
-        const { email, phoneNumber, fullName, resumeUrl, linkedInProfile, jobId, status, coverLetter, additionalData, submittedAt, answers } = req.body;
+    const { email, phoneNumber, fullName, resumeUrl, linkedInProfile, jobId, status, coverLetter, additionalData, submittedAt, answers } = req.body;
 
-        const trimmedEmail = email.trim().toLowerCase();
+    const trimmedEmail = email.trim().toLowerCase();
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-        try {
-            // Create Candidate
+    try {
+        // Create Candidate
 
-            const existingCandidate = await getCandidateByEmail(trimmedEmail);
-            const candidate = existingCandidate || await createCandidate(
-                { email: trimmedEmail, fullName, resumeUrl, phoneNumber, linkedInProfile }, session
-            );
+        const existingCandidate = await getCandidateByEmail(trimmedEmail);
+        const candidate = existingCandidate || await createCandidate(
+            { email: trimmedEmail, fullName, resumeUrl, phoneNumber, linkedInProfile }, session
+        );
 
-            const candidateId = new mongoose.Types.ObjectId(candidate._id as string);
-            const jobObjectId = new mongoose.Types.ObjectId(jobId as string);
+        const candidateId = new mongoose.Types.ObjectId(candidate._id as string);
+        const jobObjectId = new mongoose.Types.ObjectId(jobId as string);
 
-            const existingApplication = await ApplicationModel.findOne({
-                candidateId,
-                jobId: jobObjectId,
-            }).session(session);
-    
-            if (existingApplication) {
-                return sendResponse(
-                    res,
-                    httpStatus.CONFLICT,
-                    false,
-                    "Candidate has already applied for this job",
-                    null
-                );
-            }
+        const existingApplication = await ApplicationModel.findOne({
+            candidateId,
+            jobId: jobObjectId,
+        }).session(session);
 
-            const application = await createApplication({
-                candidateId,
-                jobId: jobObjectId,
-                status,
-                coverLetter,
-                resumeUrl,
-                additionalData,
-                submittedAt,
-                answers: Array.isArray(answers)
-                    ? answers.map((ans: Record<string, string>) => ({
-                        questionId: ans.questionId,
-                        questionText: ans.questionText,
-                        answer: ans.answer,
-                    }))
-                    : [],
-            }, session);
-
-            await CandidateModel.findOneAndUpdate({ _id: candidateId }, { $push: { applications: application._id } }, { session })
-
-            await session.commitTransaction();
-
+        if (existingApplication) {
             return sendResponse(
                 res,
-                httpStatus.OK,
-                true,
-                "Invitation sent successfully",
-                application
+                httpStatus.CONFLICT,
+                false,
+                "Candidate has already applied for this job",
+                null
             );
-        } catch (error) {
-            await session.abortTransaction();
-            req.log?.error(error);
-            next(error);
-        } finally {
-            session.endSession();
         }
+
+        const application = await createApplication({
+            candidateId,
+            jobId: jobObjectId,
+            status,
+            coverLetter,
+            resumeUrl,
+            additionalData,
+            submittedAt,
+            answers: Array.isArray(answers)
+                ? answers.map((ans: Record<string, string>) => ({
+                    questionId: ans.questionId,
+                    questionText: ans.questionText,
+                    answer: ans.answer,
+                }))
+                : [],
+        }, session);
+
+        await CandidateModel.findOneAndUpdate({ _id: candidateId }, { $push: { applications: application._id } }, { session })
+
+        await session.commitTransaction();
+
+        return sendResponse(
+            res,
+            httpStatus.OK,
+            true,
+            "Invitation sent successfully",
+            application
+        );
+    } catch (error) {
+        await session.abortTransaction();
+        req.log?.error(error);
+        next(error);
+    } finally {
+        session.endSession();
+    }
 }
 
 export const getJobInfoById = async (req: Request, res: Response, next: NextFunction) => {
@@ -256,7 +256,7 @@ export const getJobInfoById = async (req: Request, res: Response, next: NextFunc
     }
 }
 
-export const fetchApplicationsByJobId = async (req: Request, res: Response, next: NextFunction) =>{
+export const fetchApplicationsByJobId = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
         const { jobId } = req.params;
@@ -265,9 +265,33 @@ export const fetchApplicationsByJobId = async (req: Request, res: Response, next
 
         return sendResponse(res, httpStatus.OK, true, "Applications fetched successfully", applications);
 
-        
+
     } catch (error) {
         req.log?.error(error);
         next(error);
+    }
+}
+
+
+export const fetchApplicationsByAgencyId = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { agencyId } = req.params;
+
+
+        const jobs = await JobModel.find({ agencyId }).select("_id").lean();
+        const jobIds = jobs.map((job) => job._id);
+
+        const applications = await ApplicationModel.find({ jobId: { $in: jobIds } })
+            .populate("candidateId", "fullName email")
+            .populate("jobId", "title companyName")
+            .sort({ createdAt: -1 })
+            // .skip(skip)
+            // .limit(limit)
+            .lean();
+
+        return sendResponse(res, httpStatus.OK, true, "Applications fetched successfully", applications);
+    } catch (error) {
+        res.log?.error(error);
+        next();
     }
 }

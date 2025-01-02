@@ -16,6 +16,7 @@ interface IApplication extends Document {
     submittedAt: Date;
     notes?: Types.ObjectId[];
     answers?: IAnswer[];
+    score?: number;
 }
 
 const applicationSchema = new Schema<IApplication>(
@@ -27,6 +28,7 @@ const applicationSchema = new Schema<IApplication>(
         },
         resumeUrl: { type: String, required: true },
         coverLetter: { type: String },
+        score: { type: Number, default: 0 },
         additionalData: { type: Schema.Types.Mixed },
         submittedAt: { type: Date, default: Date.now },
         notes: [{ type: Schema.Types.ObjectId, ref: "Note" }],
@@ -56,6 +58,8 @@ export const getApplicationById = (id: string) =>
 export const getApplicationsByCandidateId = (candidateId: string) => ApplicationModel.find({ candidateId }).lean();
 
 export const getApplicationsByJobId = (jobId: string) => ApplicationModel.find({ jobId }).populate('candidateId').populate("jobId").lean();
+
+export const getApplicationByAgencyId = (agencyId: string) => ApplicationModel.find({ where: { jobId: { $in: agencyId } } }).lean();
 
 
 export const createApplication = (values: Partial<IApplication>, session: ClientSession) =>

@@ -83,3 +83,24 @@ export const jobSchema = z.object({
     jobBoards: z.array(JobBoardsSchema).optional(),
     collaborators: z.array(CollaboratorsSchema).optional(),
 });
+
+export const googleEventSchema = z.object({
+        summary: z.string(),
+        description: z.string().optional(),
+        start: z.object({
+            dateTime: z.string().min(6, "Start dateTime is required"),
+            timeZone: z.string().min(6, "Time zone is required"),
+        }),
+        end: z.object({
+            dateTime: z.string().nonempty("End dateTime is required"),
+            timeZone: z.string().nonempty("Time zone is required"),
+        }),
+        attendees: z
+            .array(
+                z.object({
+                    email: z.string().email("Invalid email address"),
+                })
+            )
+            .optional()
+    });
+

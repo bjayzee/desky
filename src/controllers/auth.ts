@@ -141,13 +141,12 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const foundUser = {
             email: user.email,
-            name: agency.fullName,
+            name: user.userType === "member" ? member?.name : agency.fullName, 
             companyName: agency.companyName,
-            token: token,
+            token,
             id: user._id,
             agencyId: agency._id,
             userType: user.userType,
-            memberName: member?.name,
         }
 
         return sendResponse(res, httpStatus.OK, true, "login success", foundUser);
@@ -284,3 +283,4 @@ export const verifyResetPassword = async (req: Request, res: Response, next: Nex
         next(error);
     }
 };
+

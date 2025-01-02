@@ -1,4 +1,4 @@
-import { applyJobs, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob } from "../controllers/jobs";
+import { applyJobs, fetchApplicationsByAgencyId, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob } from "../controllers/jobs";
 import { fetchAgencyById, fetchAgencyByName, inviteMember, updateApplicationStages } from "../controllers/agency";
 import { Router } from "express";
 
@@ -57,4 +57,6 @@ export default (router: Router): void => {
     router.get('/applications/:jobId', fetchApplicationsByJobId);
 
     router.patch('/applications/status', updateApplicationStages);
+
+    router.get('/applications/agency/:agencyId', fetchApplicationsByAgencyId);
 };
