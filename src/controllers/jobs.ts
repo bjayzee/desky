@@ -276,22 +276,47 @@ export const fetchApplicationsByJobId = async (req: Request, res: Response, next
 export const fetchApplicationsByAgencyId = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { agencyId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
 
+        if (!agencyId) {
+            return sendResponse(res, httpStatus.BAD_REQUEST, false, "Agency ID is required");
+        }
 
-        const jobs = await JobModel.find({ agencyId }).select("_id").lean();
-        const jobIds = jobs.map((job) => job._id);
+        const skip = (Number(page) - 1) * Number(limit);
 
-        const applications = await ApplicationModel.find({ jobId: { $in: jobIds } })
-            .populate("candidateId", "fullName email")
-            .populate("jobId", "title companyName")
-            .sort({ createdAt: -1 })
-            // .skip(skip)
-            // .limit(limit)
+        const jobs = await JobModel.find({ agencyId })
+            .select("_id")
             .lean();
 
-        return sendResponse(res, httpStatus.OK, true, "Applications fetched successfully", applications);
+        if (!jobs.length) {
+            return sendResponse(res, httpStatus.NOT_FOUND, false, "No jobs found for this agency");
+        }
+
+        const jobIds = jobs.map(job => job._id);
+
+        const [applications, total] = await Promise.all([
+            ApplicationModel.find({ jobId: { $in: jobIds } })
+                .populate("candidateId", "fullName email")
+                .populate("jobId", "title companyName")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .lean(),
+            ApplicationModel.countDocuments({ jobId: { $in: jobIds } })
+        ]);
+
+        return sendResponse(res, httpStatus.OK, true, "Applications fetched successfully", {
+            applications,
+            pagination: {
+                total,
+                page: Number(page),
+                limit: Number(limit),
+                pages: Math.ceil(total / Number(limit))
+            }
+        });
+
     } catch (error) {
         res.log?.error(error);
-        next();
+        next(error);
     }
-}
+};
