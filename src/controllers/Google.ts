@@ -1,12 +1,13 @@
 import { googleEventSchema } from '../config/validations';
 import { NextFunction, Request, Response } from 'express';
 import { google } from 'googleapis';
-import { getUserByEmail } from '../models/user';
+import { createUser, getUserByEmail } from '../models/user';
 import { sendResponse } from '../utils/response';
-import { getAgencyByUserId } from '../models/agency';
+import { createAgency, getAgencyByUserId } from '../models/agency';
 import { getMemberByEmail } from '../models/members';
 import { generateJwt } from '../utils/jwt';
 import httpStatus from 'http-status';
+import mongoose from 'mongoose';
 
 const SCOPES = [
     'https://www.googleapis.com/auth/calendar',
@@ -50,10 +51,25 @@ export const getTokens = async (code: string) => {
 };
 
 /**
+ * Automatically refresh the access token if expired.
+ */
+const ensureAccessToken = async () => {
+    const { credentials } = oauth2Client;
+    if (!credentials.expiry_date || Date.now() > credentials.expiry_date) {
+        const { credentials: newTokens } = await oauth2Client.refreshAccessToken();
+        oauth2Client.setCredentials(newTokens);
+    }
+};
+
+
+/**
  * Create a Google Calendar event.
  */
 export const createEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
+
+        await ensureAccessToken();
+
         const result = await googleEventSchema.safeParseAsync(req.body);
         if (!result.success) {
             req.log?.error(result.error);
@@ -71,6 +87,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
 
         const response = await calendar.events.insert({
             calendarId: 'primary',
+            sendNotifications: true,
             requestBody: event,
             conferenceDataVersion: 1,
         });
@@ -87,6 +104,10 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
  */
 export const listEvents = async (req: Request, res: Response, next: NextFunction) => {
     try {
+
+        await ensureAccessToken();
+
+
         const response = await calendar.events.list({
             calendarId: 'primary',
             timeMin: new Date().toISOString(),
@@ -143,13 +164,17 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
         const tokens = oauth2Client.credentials;
         const token = generateJwt(jwtPayload);
 
+
+        // Set credentials for the current session
+        oauth2Client.setCredentials(tokens);
+
         const foundUser = {
             email: user.email,
             name: user.userType === 'member' ? member?.name : agency.fullName,
             companyName: agency.companyName,
             token,
-            refreshToken: tokens.refresh_token, // Issue refresh token
-            accessToken: tokens.access_token, // Issue access token
+            refreshToken: tokens.refresh_token,
+            accessToken: tokens.access_token,
             id: user._id,
             agencyId: agency._id,
         };
@@ -198,3 +223,97 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
+export const signUpWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { googleToken } = req.body;
+
+        const ticket = await oauth2Client.verifyIdToken({
+            idToken: googleToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email) {
+            return sendResponse(res, httpStatus.UNAUTHORIZED, false, 'Invalid Google credentials.');
+        }
+
+
+
+        const email = payload.email;
+
+        // Check if the user already exists
+        const existingUser = await getUserByEmail(email);
+        if (existingUser) {
+            return sendResponse(res, httpStatus.CONFLICT, false, "User already exists, Please login");
+        }
+
+        const user = await createUser({ email, password: googleToken, isActive: true, isVerified: true }, session);
+        const userId = new mongoose.Types.ObjectId(user._id as string);
+
+        // Create the new agency
+        const agency = await createAgency({
+            userId,
+            companyName: payload.name,
+            fullName: payload.name,
+            website: payload.profile,
+            country: "UAE",
+            logoUrl: payload.picture,
+        }, session);
+
+
+        // Retrieve OAuth tokens
+        const { tokens } = await oauth2Client.getToken(googleToken);
+
+        // Set credentials for the current session
+        oauth2Client.setCredentials(tokens);
+
+
+        const jwtPayload = {
+            userId,
+            email,
+            userType: "admin",
+            agencyId: agency._id as string,
+            role: "admin",
+
+        };
+
+        const token = generateJwt(jwtPayload);
+
+        const userResponse = {
+            email,
+            name: agency.fullName, 
+            companyName: agency.companyName,
+            token,
+            id: user._id,
+            agencyId: agency._id,
+            userType: user.userType,
+            refreshToken: tokens.refresh_token,
+            accessToken: tokens.access_token,
+        };
+
+        return sendResponse(res, httpStatus.CREATED, true, 'Signup successful', userResponse);
+    } catch (error) {
+        req.log?.error(error, 'Error during Google signup');
+        await session.abortTransaction();
+        next(error);
+    } finally {
+        session.endSession();
+    }
+};
+
+export const useGoogleAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+        oauth2Client.setCredentials({ refresh_token: refreshToken });
+    }
+
+    ensureAccessToken()
+        .then(() => next())
+        .catch((error) => {
+            req.log?.error('Failed to refresh access token', error);
+            sendResponse(res, httpStatus.UNAUTHORIZED, false, 'Failed to authenticate');
+        });
+};

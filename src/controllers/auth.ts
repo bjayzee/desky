@@ -78,7 +78,7 @@ export const registerAgency = async (req: Request, res: Response, next: NextFunc
             // Send success response
             return sendResponse(res, httpStatus.CREATED, true, "User registered successfully, please check your email for the verification code", agency);
         } catch (error) {
-            // Rollback changes if any error occurs
+            req?.log.error(error);
             await session.abortTransaction();
             next(error);
         } finally {
@@ -128,13 +128,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         if (!agency) return sendResponse(res, httpStatus.UNAUTHORIZED, false, "invalid payload");
 
-        // Generate JWT token
+        const role = user.userType === 'member' ? 'member' : 'admin';
         const payload = {
-            userId: user._id as string,
+            userId: user._id.toString(),
             userType: user.userType,
             agencyId: agency._id.toString(),
             email: user.email,
-            role: "admin",
+            role,
         };
 
         const token = generateJwt(payload);
