@@ -6,7 +6,7 @@ export default (router: Router): void => {
 
     router.get("google/events", listEvents);
     router.post("google/create-event", createEvent);
-    router.post("google/auth/register", signUpWithGoogle);
-    router.post("google/auth", loginWithGoogle);
+    router.post("auth/google/register", signUpWithGoogle);
+    router.post("auth/google", loginWithGoogle);
     router.post("google/auth/refresh-token", refreshToken);
 };
