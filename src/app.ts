@@ -8,7 +8,7 @@ import { pinoHttp } from "pino-http";
 import logger from "./config/logger";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
-import { useGoogleAuthMiddleware } from 'controllers/Google';
+import { useGoogleAuthMiddleware } from './controllers/Google';
 
 
 const app = express();
