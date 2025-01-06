@@ -82,8 +82,28 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
             );
         }
 
-        const { summary, description, start, end, attendees } = result.data;
-        const event = { summary, description, start, end, attendees };
+        const { summary, description, start, end, attendees, timeZone } = result.data;
+
+        const event = {
+            summary,
+            description,
+            start: {
+                dateTime: start, 
+                timeZone, 
+            },
+            end: {
+                dateTime: end, 
+                timeZone,
+            },
+            attendees: attendees,
+            reminders: {
+                useDefault: false,
+                overrides: [
+                    { method: 'email', minutes: 24 * 60 }, // Reminder via email 24 hours before
+                    { method: 'popup', minutes: 10 }, // Popup reminder 10 minutes before
+                ],
+            },
+        };
 
         const response = await calendar.events.insert({
             calendarId: 'primary',
@@ -283,7 +303,7 @@ export const signUpWithGoogle = async (req: Request, res: Response, next: NextFu
 
         const userResponse = {
             email,
-            name: agency.fullName, 
+            name: agency.fullName,
             companyName: agency.companyName,
             token,
             id: user._id,
