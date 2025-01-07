@@ -20,7 +20,7 @@ const SCOPES = [
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.REDIRECT_URI
+    process.env.REDIRECT_URI,
 );
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -28,27 +28,39 @@ const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 /**
  * Generate the Google OAuth URL for authentication.
  */
-export const generateAuthUrl = (): string => {
-    return oauth2Client.generateAuthUrl({
-        access_type: 'offline', // Required for refresh token
-        prompt: 'consent', // Ensures refresh token is always issued
-        scope: SCOPES,
-    });
+export const generateAuthUrl = async (req: Request, res: Response) => {
+    try {
+        const response = oauth2Client.generateAuthUrl({
+            access_type: 'offline',
+            prompt: 'consent',
+            scope: SCOPES,
+        });
+
+        return sendResponse(res, httpStatus.OK, true, "url fetched successfully", response);
+    } catch (error) {
+        console.error('Error generating authorization URL:', error);
+        res.status(500).send('Internal Server Error');
+    }
 };
+
 
 /**
  * Retrieve OAuth tokens using the provided code.
  */
-export const getTokens = async (code: string) => {
-    try {
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
-        return tokens;
-    } catch (error) {
-        console.error('Error retrieving tokens:', error);
-        throw new Error('Failed to retrieve tokens');
-    }
-};
+// export const getTokens = async (req: Request, res: Response) => {
+//     try {
+//         const code = req.query.code as string;
+
+//         console.log("code", code)
+        
+//         const { tokens } = await oauth2Client.getToken(code);
+//         oauth2Client.setCredentials(tokens);
+        
+//     } catch (error) {
+//         console.error('Error retrieving tokens:', error);
+//         throw new Error('Failed to retrieve tokens');
+//     }
+// };
 
 /**
  * Automatically refresh the access token if expired.
@@ -88,20 +100,31 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
             summary,
             description,
             start: {
-                dateTime: start, 
-                timeZone, 
+                dateTime: start,
+                timeZone,
             },
             end: {
-                dateTime: end, 
+                dateTime: end,
                 timeZone,
             },
             attendees: attendees,
             reminders: {
                 useDefault: false,
                 overrides: [
-                    { method: 'email', minutes: 24 * 60 }, // Reminder via email 24 hours before
-                    { method: 'popup', minutes: 10 }, // Popup reminder 10 minutes before
+                    { method: 'email', minutes: 24 * 60 }, 
+                    { method: 'popup', minutes: 10 }, 
                 ],
+            },
+            conferenceData: {
+                createRequest: {
+                    requestId: `event-${Date.now()}`,
+                    conferenceSolutionKey: {
+                        type: 'hangoutsMeet', 
+                    },
+                    status: {
+                        statusCode: 'success',
+                    },
+                },
             },
         };
 
@@ -150,18 +173,44 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
     try {
         const { googleToken } = req.body;
 
+        // Ensure googleToken is available
+        if (!googleToken) {
+            return sendResponse(res, httpStatus.BAD_REQUEST, false, 'Google token is required');
+        }
+
+        // Exchange the authorization code for tokens
+        const { tokens } = await oauth2Client.getToken(googleToken);
+        if (!tokens || !tokens.access_token) {
+            return sendResponse(res, httpStatus.UNAUTHORIZED, false, 'Failed to retrieve access token');
+        }
+
+        oauth2Client.setCredentials(tokens);
+
+        console.log("Oauthobject", oauth2Client)
+
+        // Extract tokens
+        const { access_token, refresh_token, id_token } = tokens;
+
+        if (!id_token) {
+            return sendResponse(res, httpStatus.UNAUTHORIZED, false, 'Failed to retrieve id token');
+        }
+
+        // Verify the idToken
         const ticket = await oauth2Client.verifyIdToken({
-            idToken: googleToken,
-            audience: process.env.GOOGLE_CLIENT_ID,
+            idToken: id_token,
+            audience: process.env.GOOGLE_CLIENT_ID, // Ensure this is your correct client ID
         });
 
         const payload = ticket.getPayload();
+        console.log("payload: ", payload);
+
         if (!payload || !payload.email) {
             return sendResponse(res, httpStatus.UNAUTHORIZED, false, 'Invalid Google token');
         }
 
         const email = payload.email;
 
+        // Fetch user, agency, and member data concurrently
         const [user, agency, member] = await Promise.all([
             getUserByEmail(email),
             getUserByEmail(email).then(user => user ? getAgencyByUserId(user._id as string) : null),
@@ -169,10 +218,13 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
         ]);
 
         if (!user || !agency) {
-            return sendResponse(res, httpStatus.UNAUTHORIZED, false, 'User not found');
+            return sendResponse(res, httpStatus.UNAUTHORIZED, false, 'User or agency not found');
         }
 
+        // Determine user role
         const role = user.userType === 'member' ? 'member' : 'admin';
+
+        // Create JWT payload for your own platform
         const jwtPayload = {
             userId: user._id.toString(),
             userType: user.userType,
@@ -181,25 +233,23 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
             role,
         };
 
-        const tokens = oauth2Client.credentials;
-        const token = generateJwt(jwtPayload);
+        const token = generateJwt(jwtPayload); // Custom JWT for your platform
 
-
-        // Set credentials for the current session
-        oauth2Client.setCredentials(tokens);
-
+        // Response with the user and generated JWT
         const foundUser = {
             email: user.email,
             name: user.userType === 'member' ? member?.name : agency.fullName,
             companyName: agency.companyName,
             token,
-            refreshToken: tokens.refresh_token,
-            accessToken: tokens.access_token,
             id: user._id,
             agencyId: agency._id,
+            userType: user.userType,
+            access_token,
+            refresh_token
         };
 
         return sendResponse(res, httpStatus.OK, true, 'Login successful', foundUser);
+
     } catch (error) {
         req.log?.error(error, 'Error during Google login');
         next(error);
@@ -207,16 +257,17 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
 };
 
 
+
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { refreshToken } = req.body;
+        const { refresh_token } = req.body;
 
         if (!refreshToken) {
             return sendResponse(res, httpStatus.BAD_REQUEST, false, 'Refresh token is required');
         }
 
         // Set the OAuth2 client credentials with the provided refresh token
-        oauth2Client.setCredentials({ refresh_token: refreshToken });
+        oauth2Client.setCredentials({ refresh_token });
 
         // Get a new access token
         const newTokens = await oauth2Client.refreshAccessToken();

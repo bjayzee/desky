@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { login, registerAgency, resetPassword, verifyEmail, verifyResetPassword } from "../controllers/auth";
-import { generateAuthUrl} from "../controllers/Google";
+import { loginWithGoogle, signUpWithGoogle } from "../controllers/Google";
 
 export default (router: Router): void => {
     /**
@@ -168,6 +168,10 @@ export default (router: Router): void => {
      *         description: User not found
      */
     router.post("/auth/verify-reset-password", verifyResetPassword);
+    
+    router.post("/auth/google", loginWithGoogle);
 
-    router.get("google/auth-url", generateAuthUrl);
-};
+    router.post("/auth/google/register", signUpWithGoogle);
+
+    // router.get("/redirect", getTokens);
+}
