@@ -11,8 +11,7 @@ import { generateJwt } from '../utils/jwt';
 import * as argon2 from 'argon2';
 import { createUser, getUserByEmail, updateUserById, verifyPassword } from '../models/user';
 import mongoose from 'mongoose';
-import { getMemberByEmail } from '../models/members';
-
+import { getMemberByUserId } from '../models/members';
 
 
 export const registerAgency = async (req: Request, res: Response, next: NextFunction) => {
@@ -124,7 +123,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const agency = await getAgencyByUserId(user._id as string);
 
-        const member = await getMemberByEmail(email);
+        const member = await getMemberByUserId(user._id as string);
 
         if (!agency) return sendResponse(res, httpStatus.UNAUTHORIZED, false, "invalid payload");
 
@@ -141,7 +140,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const foundUser = {
             email: user.email,
-            name: user.userType === "member" ? member?.name : agency.fullName, 
+            name: user.userType === "member" ? member[0].name : agency.fullName, 
             companyName: agency.companyName,
             token,
             id: user._id,

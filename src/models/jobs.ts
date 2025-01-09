@@ -11,6 +11,8 @@ export enum WorkPlaceMode {
 export enum JobStatus {
     OPEN = "Open",
     CLOSED = "Closed",
+    DRAFT = "Draft",
+    PAUSED = "Paused",
 }
 
 export interface Question {
@@ -197,6 +199,9 @@ export const createJob = (values: Partial<IJobs>, session: ClientSession) =>
 
 export const updateJobById = (id: string, values: Partial<IJobs>) =>
     JobModel.findByIdAndUpdate({ _id: id }, values, { new: true }).lean();
+
+export const updateJobByStatus = (id: string, status: JobStatus) =>
+    JobModel.findByIdAndUpdate({ _id: id }, { status }, { new: true }).lean();
 
 
 export const deleteJobById = (id: string) => JobModel.findByIdAndDelete(id);

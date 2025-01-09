@@ -5,10 +5,10 @@ import { sendResponse } from "../utils/response";
 import { generateRandomPassword } from "../utils/codeGen";
 import { createUser, getUserByEmail } from "../models/user";
 import mongoose from "mongoose";
-import { createMember } from "../models/members";
+import { createMember, getMemberByAgencyId } from "../models/members";
 import { sendEmail } from "../utils/mailSender";
 import httpStatus from "http-status";
-import { updateApplicationStatus } from "../models/application";
+import { updateApplicationStatus, getApplicationsByCandidateId } from "../models/application";
 
 export const inviteMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -126,5 +126,36 @@ export const updateApplicationStages = async(req: Request, res: Response, next: 
         req.log?.error(error);
         next(error);
         
+    }
+}
+
+export const fetchApplicationsByCandidateId = async (req: Request, res: Response, next: NextFunction) => {
+    try{
+
+        const { candidateId } = req.params;
+
+        const applications = getApplicationsByCandidateId(candidateId);
+
+        return sendResponse(res, httpStatus.OK, true, "applications fetched successfully", applications);
+
+    }catch(error){
+        req.log?.error(error);
+        next(error);
+    }
+}
+
+export const fetchMembersByAgencyId = async(req: Request, res: Response, next: NextFunction) =>{
+
+    try{
+
+        const { agencyId } = req.params;
+
+        const members = getMemberByAgencyId(agencyId);
+
+        return sendResponse(res, httpStatus.OK, true, "Members fetched successfully", members)
+
+    }catch(error){
+        req.log?.error(error);
+        next(error);
     }
 }

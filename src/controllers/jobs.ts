@@ -1,7 +1,7 @@
 import { sendResponse } from "../utils/response";
 import { jobSchema } from "../config/validations";
 import { NextFunction, Request, Response } from "express";
-import { createJob, getJobByAgencyId, getJobByAgencyName, getJobById, JobModel, JobStatus, updateJobById, WorkPlaceMode } from "../models/jobs";
+import { createJob, getJobByAgencyId, getJobByAgencyName, getJobById, JobModel, JobStatus, updateJobById, WorkPlaceMode, updateJobByStatus } from "../models/jobs";
 import httpStatus from "http-status";
 import { AgencyModel } from "../models/agency";
 import mongoose from "mongoose";
@@ -157,7 +157,7 @@ export const getJobsByAgencyId = async (req: Request, res: Response, next: NextF
 export const updateJob = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
-        const { id } = req.params;
+        const { id } = req.body;
 
         const updatedJob = await updateJobById(id, req.body);
 
@@ -320,3 +320,18 @@ export const fetchApplicationsByAgencyId = async (req: Request, res: Response, n
         next(error);
     }
 };
+
+export const updateJobStatus = async(req: Request, res: Response, next: NextFunction) =>{
+    try{
+
+        const { id, status } = req.body;
+
+        const updatedJob = await updateJobByStatus(id, status);
+
+        return sendResponse(res, httpStatus.OK, true, "Job updated successfully", updatedJob);
+
+    }catch(error){
+        req.log?.error(error);
+        next(error)
+    }
+}

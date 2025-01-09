@@ -4,10 +4,10 @@ import { google } from 'googleapis';
 import { createUser, getUserByEmail } from '../models/user';
 import { sendResponse } from '../utils/response';
 import { createAgency, getAgencyByUserId } from '../models/agency';
-import { getMemberByEmail } from '../models/members';
 import { generateJwt } from '../utils/jwt';
 import httpStatus from 'http-status';
 import mongoose from 'mongoose';
+import { getMemberByUserId } from '../models/members';
 
 const SCOPES = [
     'https://www.googleapis.com/auth/calendar',
@@ -214,7 +214,7 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
         const [user, agency, member] = await Promise.all([
             getUserByEmail(email),
             getUserByEmail(email).then(user => user ? getAgencyByUserId(user._id as string) : null),
-            getMemberByEmail(email),
+            getUserByEmail(email).then(user => user ? getMemberByUserId(user._id as string) : null),
         ]);
 
         if (!user || !agency) {
@@ -233,12 +233,12 @@ export const loginWithGoogle = async (req: Request, res: Response, next: NextFun
             role,
         };
 
-        const token = generateJwt(jwtPayload); // Custom JWT for your platform
+        const token = generateJwt(jwtPayload); 
 
         // Response with the user and generated JWT
         const foundUser = {
             email: user.email,
-            name: user.userType === 'member' ? member?.name : agency.fullName,
+            name: user.userType === 'member' ? member?.[0].name : agency.fullName,
             companyName: agency.companyName,
             token,
             id: user._id,

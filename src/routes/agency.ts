@@ -1,6 +1,7 @@
-import { applyJobs, fetchApplicationsByAgencyId, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob } from "../controllers/jobs";
-import { fetchAgencyById, fetchAgencyByName, inviteMember, updateApplicationStages } from "../controllers/agency";
+import { applyJobs, fetchApplicationsByAgencyId, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob, updateJobStatus } from "../controllers/jobs";
+import { fetchAgencyById, fetchAgencyByName, fetchApplicationsByCandidateId, fetchMembersByAgencyId, inviteMember, updateApplicationStages } from "../controllers/agency";
 import { Router } from "express";
+import { addNote, addReaction, addReply, getNoteByApplicationId } from "../controllers/notes";
 
 export default (router: Router): void => {
     /**
@@ -59,4 +60,18 @@ export default (router: Router): void => {
     router.patch('/applications/status', updateApplicationStages);
 
     router.get('/applications/agency/:agencyId', fetchApplicationsByAgencyId);
+
+    router.patch('/jobs/status', updateJobStatus);
+
+    router.get('/agency/:agencyId/members', fetchMembersByAgencyId);
+
+    router.post("/jobs/applications/notes", addNote);
+
+    router.post("/jobs/applications/notes/:noteId/reaction", addReaction);
+
+    router.post("/jobs/applications/notes/reply/:parentNoteId", addReply);
+
+    router.get("/applications/notes/:applicationId", getNoteByApplicationId);
+
+    router.get("/applications/candidate/:candidateId", fetchApplicationsByCandidateId);
 };
