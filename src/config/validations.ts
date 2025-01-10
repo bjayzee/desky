@@ -41,8 +41,8 @@ export const inviteMemberSchema = z.object({
 });
 
 
-const WorkPlaceMode = z.enum(["Remote", "On-site", "Hybrid"]);
-const JobStatus = z.enum(["Active", "Closed", "Pending"]);
+const WorkPlaceMode = z.enum(["Remote", "On-Site", "Hybrid"]);
+const JobStatus = z.enum(["Open", "Closed", "Draft", "Paused"]);
 const QuestionSchema = z.object({
     id: z.string(),
     question: z.string(),
@@ -55,11 +55,7 @@ const JobBoardsSchema = z.object({
     name: z.string(),
     boardLink: z.string().url(),
 });
-const CollaboratorsSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    role: z.string(),
-});
+
 
 export const jobSchema = z.object({
     title: z.string(),
@@ -81,7 +77,7 @@ export const jobSchema = z.object({
     status: JobStatus,
     questions: z.array(QuestionSchema),
     jobBoards: z.array(JobBoardsSchema).optional(),
-    collaborators: z.array(CollaboratorsSchema).optional(),
+    collaborators: z.array(z.string()).optional(),
 });
 
 export const googleEventSchema = z.object({

@@ -29,7 +29,7 @@ export const getMemberById = (id: string) =>
     MembersModel.findById(id).populate("agencyId").lean();
 
 export const getMemberByAgencyId = (agencyId: string) =>
-    MembersModel.find({ agencyId }).populate("agencyId").lean();
+    MembersModel.find({ agencyId }).lean();
 
 export const getMemberByUserId = (userId: string) =>
     MembersModel.find({ userId }).populate("agencyId").lean();

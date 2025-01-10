@@ -134,7 +134,7 @@ export const fetchApplicationsByCandidateId = async (req: Request, res: Response
 
         const { candidateId } = req.params;
 
-        const applications = getApplicationsByCandidateId(candidateId);
+        const applications = await getApplicationsByCandidateId(candidateId);
 
         return sendResponse(res, httpStatus.OK, true, "applications fetched successfully", applications);
 
@@ -150,7 +150,7 @@ export const fetchMembersByAgencyId = async(req: Request, res: Response, next: N
 
         const { agencyId } = req.params;
 
-        const members = getMemberByAgencyId(agencyId);
+        const members = await getMemberByAgencyId(agencyId);
 
         return sendResponse(res, httpStatus.OK, true, "Members fetched successfully", members)
 

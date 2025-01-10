@@ -5,7 +5,7 @@ import { AgencyModel } from "./agency";
 export enum WorkPlaceMode {
     HYBRID = "Hybrid",
     REMOTE = "Remote",
-    ONSITE = "On-site",
+    ONSITE = "On-Site",
 }
 
 export enum JobStatus {

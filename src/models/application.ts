@@ -55,7 +55,7 @@ export const getApplicationById = (id: string) =>
         .populate({ path: "jobId", select: "title companyName" })
         .lean();
 
-export const getApplicationsByCandidateId = (candidateId: string) => ApplicationModel.find({ candidateId }).lean();
+export const getApplicationsByCandidateId = (candidateId: string) => ApplicationModel.find({ candidateId }).populate("candidateId").populate("jobId").lean();
 
 export const getApplicationsByJobId = (jobId: string) => ApplicationModel.find({ jobId }).populate('candidateId').populate("jobId").lean();
 
