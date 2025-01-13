@@ -23,6 +23,5 @@ export const errorHandler = (error: unknown, req: Request, res: Response): void 
 
     req.log[appError.isOperational ? 'error' : 'fatal'](logContext, appError.message);
 
-    // Send Response
     sendResponse(res, appError.statusCode, false, appError.message, appError.serialize(String(req.id)));
 };

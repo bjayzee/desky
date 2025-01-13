@@ -5,16 +5,14 @@ export const agencySchema = z.object({
     fullName: z.string().min(3, 'name must be at least 3 characters'),
     email: z.string().email('Invalid email format'),
     companyName: z.string().min(3).max(100),
-    website: z.string()
-        .url('Invalid website URL format')
-        .optional(),
+    website: z.string().optional(),
     country: z.string().min(2).max(50),
     password: z.string().min(8, 'Password must contain at least 8 characters').max(255),
     linkedinProfile: z.string()
-        .regex(
-            /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_]+\/?$/,
-            'Invalid LinkedIn profile URL format'
-        )
+        // .regex(
+        //     /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_]+\/?$/,
+        //     'Invalid LinkedIn profile URL format'
+        // )
         .optional(),
     description: z.string().optional(),
     logoUrl: z.string().optional(),

@@ -32,7 +32,6 @@ interface ErrorResponse {
     stack?: string;
 }
 
-// Base AppError Class
 export class AppError extends Error {
     public readonly statusCode: number;
     public readonly isOperational: boolean;
