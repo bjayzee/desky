@@ -1,7 +1,8 @@
-import mongoose, { Schema, model, Document, ClientSession } from "mongoose";
+import mongoose, { Schema, ClientSession, model } from "mongoose";
 import * as argon2 from "argon2";
+import { IUser } from "./user";
 
-export interface IMembers extends Document {
+export interface IMembers extends IUser {
     name: string;
     userId: string;
     role: string;
@@ -9,7 +10,7 @@ export interface IMembers extends Document {
     agencyId: mongoose.Types.ObjectId;
 }
 
-const MembersSchema = new Schema<IMembers>(
+export const MembersSchema = new Schema<IMembers>(
     {
         name: { type: String },
         userId: { type: String, required: true, unique: true, index: true },
@@ -19,6 +20,7 @@ const MembersSchema = new Schema<IMembers>(
     },
     { timestamps: true }
 );
+
 
 
 export const MembersModel = model<IMembers>("Members", MembersSchema);

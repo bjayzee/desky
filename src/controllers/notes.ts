@@ -93,11 +93,24 @@ export const getNoteByApplicationId = async (req: Request, res: Response, next: 
             return sendResponse(res, httpStatus.BAD_REQUEST, false, 'Application ID is required');
         }
 
+        // const notes = await NoteModel.find({ applicationId })
+        //     .populate('author', 'name') // Populate only 'name' field, since 'email' doesn't exist in Members model
+        //     .populate('mentions', 'name') // Populate only 'name' field
+        //     .populate('replies') // Populate replies (full details of replies)
+        //     .lean();
+
         const notes = await NoteModel.find({ applicationId })
-            .populate('author', 'name') // Populate only 'name' field, since 'email' doesn't exist in Members model
-            .populate('mentions', 'name') // Populate only 'name' field
-            .populate('replies') // Populate replies (full details of replies)
-            .lean();
+            .populate({
+                path: "author",
+                model: "Agency",
+                select: "fullName", // Specify the fields to populate
+            })
+            .populate({
+                path: "author",
+                model: "Members",
+                select: "name", // Specify the fields to populate
+            })
+            .exec();
 
         if (notes.length === 0) {
             return sendResponse(res, httpStatus.NOT_FOUND, false, 'No notes found for the given application');

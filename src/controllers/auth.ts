@@ -67,14 +67,10 @@ export const registerAgency = async (req: Request, res: Response, next: NextFunc
                 expiresAt: new Date(Date.now() + 3600000)
             }, session);
 
-            // Send the verification code via email
             await sendEmail(trimmedEmail, "Email Verification Code", `Your verification code is ${verificationCode}`);
 
-            // Commit transaction if successful
             await session.commitTransaction();
-            console.log("Transaction committed successfully");
 
-            // Send success response
             return sendResponse(res, httpStatus.CREATED, true, "User registered successfully, please check your email for the verification code", agency);
         } catch (error) {
             req?.log.error(error);

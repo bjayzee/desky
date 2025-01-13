@@ -1,7 +1,8 @@
-import { Schema, model, Document, Types, ClientSession, Query } from "mongoose";
+import { Schema, Types, ClientSession, Query, model } from "mongoose";
 import { JobModel } from "./jobs";
+import { IUser } from "./user";
 
-interface IAgency extends Document {
+interface IAgency extends IUser {
     fullName: string;
     companyName: string;
     website?: string;
@@ -15,7 +16,7 @@ interface IAgency extends Document {
     jobs?: Types.ObjectId[],
 }
 
-const agencySchema = new Schema<IAgency>({
+export const agencySchema = new Schema<IAgency>({
     fullName: { type: String, required: true },
     companyName: { type: String, required: true, unique: true },
     website: { type: String },
@@ -52,6 +53,7 @@ agencySchema.pre("save", async function (next) {
     next();
 });
 
+// export const AgencyModel = UserModel.discriminator('Agency', agencySchema);
 
 export const AgencyModel = model<IAgency>('Agency', agencySchema);
 

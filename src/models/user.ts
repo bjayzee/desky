@@ -2,7 +2,7 @@ import { Schema, model, Document, Types, ClientSession } from "mongoose";
 import * as argon2 from "argon2";
 
 
-interface IUser extends Document {
+export interface IUser extends Document {
     email: string;
     userType: "candidate" | "agency" | "member";
     password: string;
@@ -24,7 +24,7 @@ const userSchema = new Schema<IUser>(
         isActive: { type: Boolean, default: false},
         agencyId: { type: Schema.Types.ObjectId, ref: "Agency" },
     },
-    { timestamps: true }
+    { timestamps: true, discriminatorKey: "userType" }
 );
 
 userSchema.pre("save", async function (next) {
@@ -38,6 +38,7 @@ userSchema.pre("save", async function (next) {
         next(err instanceof Error ? err : new Error("Password hashing failed."));
     }
 });
+
 
 export const UserModel = model<IUser>("User", userSchema);
 

@@ -12,12 +12,12 @@ interface INote extends Document {
 const noteSchema = new Schema<INote>(
     {
         applicationId: { type: Schema.Types.ObjectId, ref: "Application", required: true },
-        author: { type: Schema.Types.ObjectId, ref: "Member", required: true },
+        author: { type: Schema.Types.ObjectId, ref: "User", required: true },
         content: { type: String, required: true },
-        mentions: [{ type: Schema.Types.ObjectId, ref: "Member" }],
+        mentions: [{ type: Schema.Types.ObjectId, ref: "User" }],
         reactions: {
             type: Map,
-            of: [{ type: Schema.Types.ObjectId, ref: "Member" }], 
+            of: [{ type: Schema.Types.ObjectId, ref: "User" }], 
         },
         replies: [{ type: Schema.Types.ObjectId, ref: "Note" }],
     },
