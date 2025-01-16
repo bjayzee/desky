@@ -198,6 +198,7 @@ export const createJob = (values: Partial<IJobs>, session: ClientSession) =>
 
 
 export const updateJobById = (id: string, values: Partial<IJobs>) =>
+    
     JobModel.findByIdAndUpdate({ _id: id }, values, { new: true }).lean();
 
 export const updateJobByStatus = (id: string, status: JobStatus) =>

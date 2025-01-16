@@ -157,7 +157,7 @@ export const getJobsByAgencyId = async (req: Request, res: Response, next: NextF
 export const updateJob = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
-        const { id } = req.body;
+        const { id } = req.params;
 
         const updatedJob = await updateJobById(id, req.body);
 
@@ -335,3 +335,22 @@ export const updateJobStatus = async(req: Request, res: Response, next: NextFunc
         next(error)
     }
 }
+
+export const deleteJob = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { jobId } = req.params;
+
+        const job = await JobModel.findByIdAndDelete(jobId);
+
+        if (!job) {
+            return sendResponse(res, httpStatus.NOT_FOUND, false, "Job not found");
+        }
+
+        await ApplicationModel.deleteMany({ jobId });
+
+        return sendResponse(res, httpStatus.OK, true, "Job deleted successfully", job);
+    } catch (error) {
+        req.log?.error(error);
+        next(error);
+    }
+};

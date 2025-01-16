@@ -1,4 +1,4 @@
-import { applyJobs, fetchApplicationsByAgencyId, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob, updateJobStatus } from "../controllers/jobs";
+import { applyJobs, deleteJob, fetchApplicationsByAgencyId, fetchApplicationsByJobId, getJobInfoById, getJobsByAgencyId, getJobsByAgencyName, postJob, updateJob, updateJobStatus } from "../controllers/jobs";
 import { fetchAgencyById, fetchAgencyByName, fetchApplicationsByCandidateId, fetchMembersByAgencyId, inviteMember, updateApplicationStages } from "../controllers/agency";
 import { Router } from "express";
 import { addNote, addReaction, addReply, getNoteByApplicationId } from "../controllers/notes";
@@ -74,4 +74,6 @@ export default (router: Router): void => {
     router.get("/applications/notes/:applicationId", getNoteByApplicationId);
 
     router.get("/applications/candidate/:candidateId", fetchApplicationsByCandidateId);
+
+    router.delete('/jobs/delete/:jobId', deleteJob);
 };

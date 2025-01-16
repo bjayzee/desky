@@ -28,7 +28,7 @@ export const registerAgency = async (req: Request, res: Response, next: NextFunc
 
         // Trim and lowercase email and companyName
         const trimmedEmail = email.trim().toLowerCase();
-        const trimmedCompanyName = companyName.trim().toLowerCase();
+        const trimmedCompanyName = companyName.trim();
 
         // Check if the user already exists
         const existingUser = await getUserByEmail(trimmedEmail);
