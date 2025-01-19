@@ -50,8 +50,7 @@ interface IJobs extends Document {
   jobBoards?: JobBoards[];
   collaborators?: IMembers[];
   deadlineDate: Date;
-  embeddingId?: string;
-  vectorDimension?: number;
+  jobDescriptionEmbeddingId?: string;
 }
 
 const JobSchema = new Schema<IJobs>(
@@ -115,8 +114,7 @@ const JobSchema = new Schema<IJobs>(
         ref: 'Members',
       },
     ],
-    embeddingId: { type: String },
-    vectorDimension: { type: Number },
+    jobDescriptionEmbeddingId: { type: String },
   },
   { timestamps: true }
 );
