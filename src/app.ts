@@ -1,15 +1,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import express from "express";
-import { errorHandler } from "./middlewares/error";
-import cors from "cors";
-import router from "./routes";
-import { pinoHttp } from "pino-http";
-import logger from "./config/logger";
-import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./config/swagger";
+import express from 'express';
+import { errorHandler } from './middlewares/error';
+import cors from 'cors';
+import router from './routes';
+import { pinoHttp } from 'pino-http';
+import logger from './config/logger';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 import { useGoogleAuthMiddleware } from './controllers/Google';
-
 
 const app = express();
 
@@ -17,31 +16,28 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
-    cors({
-        credentials: true,
-    })
+  cors({
+    credentials: true,
+  })
 );
-
-
 
 app.use('/google', useGoogleAuthMiddleware);
 
-
 // Request logging
 app.use(
-    pinoHttp({
-        logger,
-        serializers: {
-            req: (req) => ({
-                method: req.method,
-                url: req.url,
-                userAgent: req.headers["user-agent"],
-            }),
-            res: (res) => ({
-                statusCode: res.statusCode,
-            }),
-        },
-    })
+  pinoHttp({
+    logger,
+    serializers: {
+      req: (req) => ({
+        method: req.method,
+        url: req.url,
+        userAgent: req.headers['user-agent'],
+      }),
+      res: (res) => ({
+        statusCode: res.statusCode,
+      }),
+    },
+  })
 );
 
 // Swagger UI setup
@@ -61,8 +57,17 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 //     next();
 // });
 
+// Add these test routes at the top of your routes
+app.get('/test', (req, res) => {
+  res.json({ message: 'Basic test endpoint working' });
+});
+
+app.get('/api/v1/test', (req, res) => {
+  res.json({ message: 'API test endpoint working' });
+});
+
 // application routes
-app.use("/api/v1", router());
+app.use('/api/v1', router());
 
 // Error handling middleware
 app.use(errorHandler);
