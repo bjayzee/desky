@@ -134,12 +134,12 @@ export const postJob = async (
         }
       );
 
-      const { job_id: embeddingId, vector_dimension: vectorDimension } =
-        JSON.parse(response.data.body);
+      const { job_id: jobDescriptionEmbeddingId } = JSON.parse(
+        response.data.body
+      );
 
       await JobModel.findByIdAndUpdate(job._id, {
-        embeddingId,
-        vectorDimension,
+        jobDescriptionEmbeddingId,
       });
 
       // Here you could update the job with the embedding data if needed
