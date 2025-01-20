@@ -12,6 +12,7 @@
   "author": "Adams Bolaji-GetDesky",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.731.1",
     "@google-cloud/local-auth": "^2.1.1",
     "argon2": "^0.41.1",
     "axios": "^1.7.9",
