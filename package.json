@@ -7,8 +7,7 @@
     "test": "jest",
     "dev": "nodemon",
     "start": "node ./dist/server.js",
-    "build": "tsc --build",
-    "vercel-build": "echo hello"
+    "build": "tsc --build"
   },
   "author": "Adams Bolaji-GetDesky",
   "license": "ISC",
