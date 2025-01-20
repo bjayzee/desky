@@ -1,20 +1,17 @@
 {
   "compilerOptions": {
-      "skipLibCheck": true,
-      "module": "NodeNext",
-      "moduleResolution": "NodeNext",
-      "baseUrl": "src",
-      "outDir": "./dist",
-      "rootDir": "./src",
-      "sourceMap": true,
-      "noImplicitAny": true,
-      "strict": true,
-      "esModuleInterop": true,
-      "forceConsistentCasingInFileNames": true,
-      "typeRoots": [
-          "./src/types",
-          "./node_modules/@types"
-        ]
+    "skipLibCheck": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": "src",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": ["./src/types", "./node_modules/@types"]
   },
-  "include": ["src/**/*", "src/types/**/*", "__tests__/**/*" ]
+  "include": ["src/**/*", "src/types/**/*", "__tests__/**/*", "./api/*.ts"]
 }
