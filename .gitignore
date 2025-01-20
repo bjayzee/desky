@@ -93,8 +93,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
-
 
 
 # Stores VSCode versions used for testing VSCode extensions
@@ -105,5 +103,4 @@ dist
 # Serverless Webpack directories
 .webpack/
 
-
-# End of https://www.toptal.com/developers/gitignore/api/node
+.vercel
