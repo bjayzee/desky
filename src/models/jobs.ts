@@ -200,8 +200,6 @@ export const deleteJobById = (id: string) => JobModel.findByIdAndDelete(id);
 
 export const countJobs = (filters = {}) => JobModel.countDocuments(filters);
 
-export const getJobByAgencyId = (id: string) =>
-  JobModel.find({ agencyId: id }).lean();
+export const getJobByAgencyId = (id: string) => JobModel.find({ agencyId: id}).populate({path: 'collaborators', model: 'Members'}).lean();
 
-export const getJobByAgencyName = (companyName: string) =>
-  JobModel.find({ companyName }).lean();
+export const getJobByAgencyName = (companyName: string) => JobModel.find({ companyName }).populate({path: 'collaborators'}).lean();

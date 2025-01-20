@@ -28,7 +28,7 @@ const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 /**
  * Generate the Google OAuth URL for authentication.
  */
-export const generateAuthUrl = async (req: Request, res: Response) => {
+export const generateAuthUrl = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const response = oauth2Client.generateAuthUrl({
             access_type: 'offline',
@@ -39,7 +39,7 @@ export const generateAuthUrl = async (req: Request, res: Response) => {
         return sendResponse(res, httpStatus.OK, true, "url fetched successfully", response);
     } catch (error) {
         console.error('Error generating authorization URL:', error);
-        res.status(500).send('Internal Server Error');
+        next(error);
     }
 };
 
