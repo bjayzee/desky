@@ -57,15 +57,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 //     next();
 // });
 
-// Add these test routes at the top of your routes
-app.get('/test', (req, res) => {
-  res.json({ message: 'Basic test endpoint working' });
-});
-
-app.get('/api/v1/test', (req, res) => {
-  res.json({ message: 'API test endpoint working' });
-});
-
 // application routes
 app.use('/api/v1', router());
 
