@@ -26,7 +26,7 @@ import {
   getApplicationsByJobId,
 } from '../models/application';
 import axios from 'axios';
-import { createJobFolder } from '../utils/storage';
+import { createJobFolder, uploadFile } from '../utils/storage';
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
   switch (value) {
@@ -242,30 +242,43 @@ export const applyJobs = async (
   res: Response,
   next: NextFunction
 ) => {
-  // todo: implement input validation
-
-  const {
-    email,
-    phoneNumber,
-    fullName,
-    resumeUrl,
-    linkedInProfile,
-    jobId,
-    status,
-    coverLetter,
-    additionalData,
-    submittedAt,
-    answers,
-  } = req.body;
-
-  const trimmedEmail = email.trim().toLowerCase();
-
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Create Candidate
+    const {
+      email,
+      phoneNumber,
+      fullName,
+      linkedInProfile,
+      jobId,
+      status,
+      coverLetter,
+      additionalData,
+      submittedAt,
+      answers,
+    } = req.body;
 
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // Get job details to create proper folder structure
+    const job = await JobModel.findById(jobId).populate('agencyId');
+    if (!job) {
+      return sendResponse(res, httpStatus.NOT_FOUND, false, 'Job not found');
+    }
+
+    // Upload file to S3
+    const timestamp = Date.now();
+    const fileName = `${trimmedEmail}_${timestamp}.pdf`;
+
+    const resumeUrl = await uploadFile(
+      job.companyName,
+      job.title,
+      fileName,
+      req.file!.buffer
+    );
+
+    // Create or get existing candidate
     const existingCandidate = await getCandidateByEmail(trimmedEmail);
     const candidate =
       existingCandidate ||
@@ -273,7 +286,7 @@ export const applyJobs = async (
         {
           email: trimmedEmail,
           fullName,
-          resumeUrl,
+          resumeUrl, // Now using the S3 URL
           phoneNumber,
           linkedInProfile,
         },
