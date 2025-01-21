@@ -26,6 +26,7 @@ import {
   getApplicationsByJobId,
 } from '../models/application';
 import axios from 'axios';
+import { createJobFolder } from '../utils/storage';
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
   switch (value) {
@@ -121,6 +122,9 @@ export const postJob = async (
       { $push: { jobs: job._id } },
       { session, new: true }
     );
+
+    // Create job folder before committing the transaction
+    await createJobFolder(agency.companyName, job.title);
 
     await session.commitTransaction();
     session.endSession();
