@@ -41,3 +41,32 @@ export async function createJobFolder(
   const fullPath = `${companyName}/${jobTitle}/`;
   return createS3Folder(fullPath);
 }
+
+export async function uploadFile(
+  companyName: string,
+  jobTitle: string,
+  fileName: string,
+  fileBuffer: Buffer
+): Promise<string> {
+  try {
+    const key = `${companyName}/${jobTitle}/${fileName}`;
+
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: 'application/pdf',
+      },
+    });
+
+    await upload.done();
+
+    // Return the S3 URL
+    return `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  } catch (error) {
+    console.error('Error uploading file to S3:', error);
+    throw error;
+  }
+}
