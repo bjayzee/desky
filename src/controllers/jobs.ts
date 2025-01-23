@@ -256,8 +256,21 @@ export const applyJobs = async (
       coverLetter,
       additionalData,
       submittedAt,
-      answers,
+      answers: rawAnswers,
     } = req.body;
+
+    // Parse answers if they're a string
+    let answers = rawAnswers;
+    if (typeof rawAnswers === 'string') {
+      try {
+        answers = JSON.parse(rawAnswers);
+      } catch (e) {
+        console.log('Failed to parse answers string:', e);
+        answers = [];
+      }
+    }
+
+    console.log('Processed answers:', answers);
 
     const trimmedEmail = email.trim().toLowerCase();
 
@@ -330,6 +343,8 @@ export const applyJobs = async (
       },
       session
     );
+
+    console.log('Created application with answers:', application.answers);
 
     await CandidateModel.findOneAndUpdate(
       { _id: candidateId },
