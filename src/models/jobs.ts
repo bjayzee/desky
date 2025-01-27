@@ -40,7 +40,6 @@ interface IJobs extends Document {
   skills: string[];
   officeLocation: string;
   workPlaceMode: WorkPlaceMode;
-  employeeLocation: string;
   hourlyRate?: number;
   baseSalaryRange?: number;
   upperSalaryRange?: number;
@@ -74,7 +73,6 @@ const JobSchema = new Schema<IJobs>(
       enum: Object.values(WorkPlaceMode),
       required: true,
     },
-    employeeLocation: { type: String, required: true },
     deadlineDate: { type: Date, required: true },
     hourlyRate: { type: Number },
     baseSalaryRange: { type: Number },

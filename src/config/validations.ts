@@ -68,7 +68,6 @@ export const jobSchema = z.object({
   deadlineDate: z.string(),
   officeLocation: z.string(),
   workPlaceMode: WorkPlaceMode,
-  employeeLocation: z.string(),
   hourlyRate: z.number().optional(),
   baseSalaryRange: z.number().optional(),
   upperSalaryRange: z.number().optional(),
