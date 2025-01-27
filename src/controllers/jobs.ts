@@ -98,7 +98,6 @@ export const postJob = async (
         skills: result.data.skills,
         officeLocation: result.data.officeLocation,
         workPlaceMode: mapToWorkPlaceMode(result.data.workPlaceMode),
-        employeeLocation: result.data.employeeLocation,
         hourlyRate: result.data.hourlyRate,
         baseSalaryRange: result.data.baseSalaryRange,
         upperSalaryRange: result.data.upperSalaryRange,
