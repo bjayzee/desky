@@ -251,6 +251,9 @@ export const applyJobs = async (
       phoneNumber,
       fullName,
       linkedInProfile,
+      location,
+      portfolioUrl,
+      expectedPay,
       jobId,
       status,
       coverLetter,
@@ -302,6 +305,9 @@ export const applyJobs = async (
           resumeUrl, // Now using the S3 URL
           phoneNumber,
           linkedInProfile,
+          location,
+          portfolioUrl,
+          expectedPay,
         },
         session
       ));
