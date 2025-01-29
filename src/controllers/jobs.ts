@@ -426,7 +426,6 @@ export const fetchApplicationsByAgencyId = async (
 ) => {
   try {
     const { agencyId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
 
     if (!agencyId) {
       return sendResponse(
@@ -436,8 +435,6 @@ export const fetchApplicationsByAgencyId = async (
         'Agency ID is required'
       );
     }
-
-    const skip = (Number(page) - 1) * Number(limit);
 
     const jobs = await JobModel.find({ agencyId }).select('_id').lean();
 
@@ -452,31 +449,18 @@ export const fetchApplicationsByAgencyId = async (
 
     const jobIds = jobs.map((job) => job._id);
 
-    const [applications, total] = await Promise.all([
-      ApplicationModel.find({ jobId: { $in: jobIds } })
-        .populate('candidateId')
-        .populate('jobId')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      ApplicationModel.countDocuments({ jobId: { $in: jobIds } }),
-    ]);
+    const applications = await ApplicationModel.find({ jobId: { $in: jobIds } })
+      .populate('candidateId')
+      .populate('jobId')
+      .sort({ createdAt: -1 })
+      .lean();
 
     return sendResponse(
       res,
       httpStatus.OK,
       true,
       'Applications fetched successfully',
-      {
-        applications,
-        pagination: {
-          total,
-          page: Number(page),
-          limit: Number(limit),
-          pages: Math.ceil(total / Number(limit)),
-        },
-      }
+      applications
     );
   } catch (error) {
     res.log?.error(error);
