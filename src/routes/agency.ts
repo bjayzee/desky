@@ -3,6 +3,7 @@ import {
   deleteJob,
   fetchApplicationsByAgencyId,
   fetchApplicationsByJobId,
+  generateJobDescription,
   getJobInfoById,
   getJobsByAgencyId,
   getJobsByAgencyName,
@@ -60,6 +61,8 @@ export default (router: Router): void => {
    *         description: member already exists
    */
   router.post('/agency/invite-member', inviteMember);
+
+  router.post('/agency/post-job/generate-description', generateJobDescription);
 
   router.post('/agency/post-job', postJob);
 
