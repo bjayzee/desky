@@ -27,6 +27,7 @@ import {
 } from '../models/application';
 import axios from 'axios';
 import { createJobFolder, uploadFile } from '../utils/storage';
+import { OpenAI } from 'openai';
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
   switch (value) {
@@ -517,5 +518,61 @@ export const deleteJob = async (
   } catch (error) {
     req.log?.error(error);
     next(error);
+  }
+};
+
+export const generateJobDescription = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      res.status(400).json({
+        success: false,
+        message: 'Prompt is required',
+      });
+      return;
+    }
+
+    // For now, we'll just echo back the prompt as the description
+    // In a real implementation, you might want to use an AI service here
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are are an expert in generating job descriptions. You will be given a prompt and you will generate a professional job description that uses HTML tags to format the job description. When providing the description, only use HTML heading tags, paragraph tags, list tags, anchor tags, and line break tags after each element. Do not use any other tags that are not mentioned.',
+        },
+        {
+          role: 'user',
+          content: `Generate a job description for the following prompt: ${prompt}`,
+        },
+      ],
+      store: false,
+    });
+
+    const description = completion.choices[0].message.content?.replace(
+      /```html|```/g,
+      ''
+    );
+
+    res.status(200).json({
+      success: true,
+      description,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error generating job description',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 };
