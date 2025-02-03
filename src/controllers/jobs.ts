@@ -272,15 +272,22 @@ export const applyJobs = async (
         answers = [];
       }
     }
-
-    console.log('Processed answers:', answers);
-
+    
     const trimmedEmail = email.trim().toLowerCase();
 
     // Get job details to create proper folder structure
-    const job = await JobModel.findById(jobId).populate('agencyId');
+    const job = await JobModel.findById(jobId).populate('agencyId').lean();
     if (!job) {
       return sendResponse(res, httpStatus.NOT_FOUND, false, 'Job not found');
+    }
+
+    if (!job.jobDescriptionEmbeddingId) {
+      return sendResponse(
+        res,
+        httpStatus.BAD_REQUEST,
+        false,
+        'Job description embedding not found'
+      );
     }
 
     // Upload file to S3
@@ -293,6 +300,9 @@ export const applyJobs = async (
       fileName,
       req.file!.buffer
     );
+
+    // Construct the S3 URL
+    const s3Url = `s3://${process.env.AWS_BUCKET_NAME}/${job.companyName}/${job.title}/${fileName}`;
 
     // Create or get existing candidate
     const existingCandidate = await getCandidateByEmail(trimmedEmail);
@@ -330,13 +340,14 @@ export const applyJobs = async (
       );
     }
 
-    const application = await createApplication(
+    const application = (await createApplication(
       {
         candidateId,
         jobId: jobObjectId,
         status,
         coverLetter,
         resumeUrl,
+        s3Url,
         additionalData,
         submittedAt,
         answers: Array.isArray(answers)
@@ -348,9 +359,7 @@ export const applyJobs = async (
           : [],
       },
       session
-    );
-
-    console.log('Created application with answers:', application.answers);
+    )) as any;
 
     await CandidateModel.findOneAndUpdate(
       { _id: candidateId },
@@ -359,6 +368,24 @@ export const applyJobs = async (
     );
 
     await session.commitTransaction();
+
+    // Make a request to the AWS embedding API to generate the embeddings
+    try {
+      const response = await axios.post(
+        process.env.AWS_CV_SCORE_API_URL as string,
+        {
+          body: {
+            application_id: application._id.toString() as string,
+            s3_url: s3Url,
+            job_id: job.jobDescriptionEmbeddingId,
+          },
+        }
+      );
+    } catch (error) {
+      req.log?.error('Failed to send resume to external API:', error);
+      // The application is already created, so we just log the error and continue
+      // No need to call next(error) as this is not a critical failure
+    }
 
     return sendResponse(
       res,
