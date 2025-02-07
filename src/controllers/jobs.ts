@@ -28,6 +28,7 @@ import {
 import axios from 'axios';
 import { createJobFolder, uploadFile } from '../utils/storage';
 import { OpenAI } from 'openai';
+import { sendEmail } from '../utils/mailSender';
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
   switch (value) {
@@ -386,6 +387,15 @@ export const applyJobs = async (
       // The application is already created, so we just log the error and continue
       // No need to call next(error) as this is not a critical failure
     }
+
+    // Send confirmation email to the candidate
+    await sendEmail(
+      trimmedEmail,
+      'Application Received from Desky',
+      `Dear ${fullName}, Thank you for submitting your application for the ${job.title} position at ${job.companyName}. 
+       We have received your application and our team will review it shortly.
+       Desky`
+    );
 
     return sendResponse(
       res,
