@@ -40,10 +40,9 @@ interface IJobs extends Document {
   skills: string[];
   officeLocation: string;
   workPlaceMode: WorkPlaceMode;
-  employeeLocation: string;
   hourlyRate?: number;
-  baseSalaryRange: number;
-  upperSalaryRange: number;
+  baseSalaryRange?: number;
+  upperSalaryRange?: number;
   otherBenefits: string[];
   status: JobStatus;
   questions: Question[];
@@ -74,11 +73,10 @@ const JobSchema = new Schema<IJobs>(
       enum: Object.values(WorkPlaceMode),
       required: true,
     },
-    employeeLocation: { type: String, required: true },
     deadlineDate: { type: Date, required: true },
     hourlyRate: { type: Number },
-    baseSalaryRange: { type: Number, required: true },
-    upperSalaryRange: { type: Number, required: true },
+    baseSalaryRange: { type: Number },
+    upperSalaryRange: { type: Number },
     otherBenefits: { type: [String], default: [] },
     status: {
       type: String,
@@ -200,6 +198,10 @@ export const deleteJobById = (id: string) => JobModel.findByIdAndDelete(id);
 
 export const countJobs = (filters = {}) => JobModel.countDocuments(filters);
 
-export const getJobByAgencyId = (id: string) => JobModel.find({ agencyId: id}).populate({path: 'collaborators', model: 'Members'}).lean();
+export const getJobByAgencyId = (id: string) =>
+  JobModel.find({ agencyId: id })
+    .populate({ path: 'collaborators', model: 'Members' })
+    .lean();
 
-export const getJobByAgencyName = (companyName: string) => JobModel.find({ companyName }).populate({path: 'collaborators'}).lean();
+export const getJobByAgencyName = (companyName: string) =>
+  JobModel.find({ companyName }).populate({ path: 'collaborators' }).lean();

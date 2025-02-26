@@ -26,6 +26,9 @@ import {
   getApplicationsByJobId,
 } from '../models/application';
 import axios from 'axios';
+import { createJobFolder, uploadFile } from '../utils/storage';
+import { OpenAI } from 'openai';
+import { sendEmail } from '../utils/mailSender';
 
 function mapToWorkPlaceMode(value: string): WorkPlaceMode | undefined {
   switch (value) {
@@ -97,7 +100,6 @@ export const postJob = async (
         skills: result.data.skills,
         officeLocation: result.data.officeLocation,
         workPlaceMode: mapToWorkPlaceMode(result.data.workPlaceMode),
-        employeeLocation: result.data.employeeLocation,
         hourlyRate: result.data.hourlyRate,
         baseSalaryRange: result.data.baseSalaryRange,
         upperSalaryRange: result.data.upperSalaryRange,
@@ -121,6 +123,9 @@ export const postJob = async (
       { $push: { jobs: job._id } },
       { session, new: true }
     );
+
+    // Create job folder before committing the transaction
+    await createJobFolder(agency.companyName, job.title);
 
     await session.commitTransaction();
     session.endSession();
@@ -238,30 +243,69 @@ export const applyJobs = async (
   res: Response,
   next: NextFunction
 ) => {
-  // todo: implement input validation
-
-  const {
-    email,
-    phoneNumber,
-    fullName,
-    resumeUrl,
-    linkedInProfile,
-    jobId,
-    status,
-    coverLetter,
-    additionalData,
-    submittedAt,
-    answers,
-  } = req.body;
-
-  const trimmedEmail = email.trim().toLowerCase();
-
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Create Candidate
+    const {
+      email,
+      phoneNumber,
+      fullName,
+      linkedInProfile,
+      location,
+      portfolioUrl,
+      expectedPay,
+      jobId,
+      status,
+      coverLetter,
+      additionalData,
+      submittedAt,
+      answers: rawAnswers,
+    } = req.body;
 
+    // Parse answers if they're a string
+    let answers = rawAnswers;
+    if (typeof rawAnswers === 'string') {
+      try {
+        answers = JSON.parse(rawAnswers);
+      } catch (e) {
+        console.log('Failed to parse answers string:', e);
+        answers = [];
+      }
+    }
+    
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // Get job details to create proper folder structure
+    const job = await JobModel.findById(jobId).populate('agencyId').lean();
+    if (!job) {
+      return sendResponse(res, httpStatus.NOT_FOUND, false, 'Job not found');
+    }
+
+    if (!job.jobDescriptionEmbeddingId) {
+      return sendResponse(
+        res,
+        httpStatus.BAD_REQUEST,
+        false,
+        'Job description embedding not found'
+      );
+    }
+
+    // Upload file to S3
+    const timestamp = Date.now();
+    const fileName = `${trimmedEmail}_${timestamp}.pdf`;
+
+    const resumeUrl = await uploadFile(
+      job.companyName,
+      job.title,
+      fileName,
+      req.file!.buffer
+    );
+
+    // Construct the S3 URL
+    const s3Url = `s3://${process.env.AWS_BUCKET_NAME}/${job.companyName}/${job.title}/${fileName}`;
+
+    // Create or get existing candidate
     const existingCandidate = await getCandidateByEmail(trimmedEmail);
     const candidate =
       existingCandidate ||
@@ -269,9 +313,12 @@ export const applyJobs = async (
         {
           email: trimmedEmail,
           fullName,
-          resumeUrl,
+          resumeUrl, // Now using the S3 URL
           phoneNumber,
           linkedInProfile,
+          location,
+          portfolioUrl,
+          expectedPay,
         },
         session
       ));
@@ -294,13 +341,14 @@ export const applyJobs = async (
       );
     }
 
-    const application = await createApplication(
+    const application = (await createApplication(
       {
         candidateId,
         jobId: jobObjectId,
         status,
         coverLetter,
         resumeUrl,
+        s3Url,
         additionalData,
         submittedAt,
         answers: Array.isArray(answers)
@@ -312,7 +360,7 @@ export const applyJobs = async (
           : [],
       },
       session
-    );
+    )) as any;
 
     await CandidateModel.findOneAndUpdate(
       { _id: candidateId },
@@ -321,6 +369,33 @@ export const applyJobs = async (
     );
 
     await session.commitTransaction();
+
+    // Make a request to the AWS embedding API to generate the embeddings
+    try {
+      const response = await axios.post(
+        process.env.AWS_CV_SCORE_API_URL as string,
+        {
+          body: {
+            application_id: application._id.toString() as string,
+            s3_url: s3Url,
+            job_id: job.jobDescriptionEmbeddingId,
+          },
+        }
+      );
+    } catch (error) {
+      req.log?.error('Failed to send resume to external API:', error);
+      // The application is already created, so we just log the error and continue
+      // No need to call next(error) as this is not a critical failure
+    }
+
+    // Send confirmation email to the candidate
+    await sendEmail(
+      trimmedEmail,
+      'Application Received from Desky',
+      `Dear ${fullName}, Thank you for submitting your application for the ${job.title} position at ${job.companyName}. 
+       We have received your application and our team will review it shortly.
+       Desky`
+    );
 
     return sendResponse(
       res,
@@ -389,7 +464,6 @@ export const fetchApplicationsByAgencyId = async (
 ) => {
   try {
     const { agencyId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
 
     if (!agencyId) {
       return sendResponse(
@@ -399,8 +473,6 @@ export const fetchApplicationsByAgencyId = async (
         'Agency ID is required'
       );
     }
-
-    const skip = (Number(page) - 1) * Number(limit);
 
     const jobs = await JobModel.find({ agencyId }).select('_id').lean();
 
@@ -415,31 +487,18 @@ export const fetchApplicationsByAgencyId = async (
 
     const jobIds = jobs.map((job) => job._id);
 
-    const [applications, total] = await Promise.all([
-      ApplicationModel.find({ jobId: { $in: jobIds } })
-        .populate('candidateId')
-        .populate('jobId')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      ApplicationModel.countDocuments({ jobId: { $in: jobIds } }),
-    ]);
+    const applications = await ApplicationModel.find({ jobId: { $in: jobIds } })
+      .populate('candidateId')
+      .populate('jobId')
+      .sort({ createdAt: -1 })
+      .lean();
 
     return sendResponse(
       res,
       httpStatus.OK,
       true,
       'Applications fetched successfully',
-      {
-        applications,
-        pagination: {
-          total,
-          page: Number(page),
-          limit: Number(limit),
-          pages: Math.ceil(total / Number(limit)),
-        },
-      }
+      applications
     );
   } catch (error) {
     res.log?.error(error);
@@ -496,5 +555,61 @@ export const deleteJob = async (
   } catch (error) {
     req.log?.error(error);
     next(error);
+  }
+};
+
+export const generateJobDescription = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      res.status(400).json({
+        success: false,
+        message: 'Prompt is required',
+      });
+      return;
+    }
+
+    // For now, we'll just echo back the prompt as the description
+    // In a real implementation, you might want to use an AI service here
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are are an expert in generating job descriptions. You will be given a prompt and you will generate a professional job description that uses HTML tags to format the job description. When providing the description, only use HTML heading tags, paragraph tags, list tags, anchor tags, and line break tags after each element. Do not use any other tags that are not mentioned.',
+        },
+        {
+          role: 'user',
+          content: `Generate a job description for the following prompt: ${prompt}`,
+        },
+      ],
+      store: false,
+    });
+
+    const description = completion.choices[0].message.content?.replace(
+      /```html|```/g,
+      ''
+    );
+
+    res.status(200).json({
+      success: true,
+      description,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error generating job description',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 };

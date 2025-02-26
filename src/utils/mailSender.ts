@@ -1,4 +1,4 @@
-import transporter from "../config/email";
+import createTransporter from "../config/email";
 
 /**
  * Sends an email using Nodemailer.
@@ -9,15 +9,13 @@ import transporter from "../config/email";
  */
 export const sendEmail = async (to: string, subject: string, text: string): Promise<void> => {
     try {
-
+        const transporter = createTransporter(); // Create and get the transporter instance
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to,
             subject,
             text,
         };
-
-        // Send the email
 
         await transporter.sendMail(mailOptions);
         console.log(`Email sent successfully to ${to}`);
