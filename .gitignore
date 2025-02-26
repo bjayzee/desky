@@ -104,3 +104,5 @@ out
 .webpack/
 
 .vercel
+
+/dist
