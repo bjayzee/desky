@@ -341,7 +341,7 @@ export const applyJobs = async (
       );
     }
 
-    const application = (await createApplication(
+    const application = await createApplication(
       {
         candidateId,
         jobId: jobObjectId,
@@ -360,7 +360,7 @@ export const applyJobs = async (
           : [],
       },
       session
-    )) as any;
+    );
 
     await CandidateModel.findOneAndUpdate(
       { _id: candidateId },
@@ -372,11 +372,11 @@ export const applyJobs = async (
 
     // Make a request to the AWS embedding API to generate the embeddings
     try {
-      const response = await axios.post(
+      await axios.post(
         process.env.AWS_CV_SCORE_API_URL as string,
         {
           body: {
-            application_id: application._id.toString() as string,
+            application_id: (application._id as mongoose.Types.ObjectId).toString(),
             s3_url: s3Url,
             job_id: job.jobDescriptionEmbeddingId,
           },
